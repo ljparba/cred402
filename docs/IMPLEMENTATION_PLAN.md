@@ -192,7 +192,7 @@ closes this with defence in depth:
 1. **Hedera-native** — a transaction ID is single-use on-ledger; resubmission yields `DUPLICATE_TRANSACTION`.
 2. **Server-side ledger** — `payment_settlements.transaction_id` carries a `UNIQUE` constraint, so any given settled transaction can unlock **exactly one** report, ever (first-use-wins binding).
 3. **Independent settlement proof** — we never take the facilitator's word for it; Mirror Node must confirm `SUCCESS` and an exact-amount credit to `payTo`.
-4. **Resource-bound nonce** — issued in the 402, stored with TTL against `{requestId, nonce}`, burned on use. Carried in the transaction memo *if* the client scheme exposes memo control (to be confirmed against `@x402/hedera` API surface; if not exposed, layers 1–3 stand and the residual gap is documented honestly in `KNOWN_LIMITATIONS.md`).
+4. **Resource-bound nonce** — issued in the 402, stored with a TTL against `{requestId, nonce}`, and burned on use. **Confirmed final design:** the Hedera `exact` scheme cannot cryptographically bind the nonce into the signed transaction, so the nonce provides **challenge freshness / TTL only**. Replay protection therefore rests entirely on layers 1–3 above — Hedera single-use transaction IDs, the DB-`UNIQUE` settlement `transaction_id`, and independent Mirror Node verification — which stand regardless of the nonce. This residual scheme gap is documented honestly in `KNOWN_LIMITATIONS.md`.
 
 ### 3.6 Database portability
 

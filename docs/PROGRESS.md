@@ -41,7 +41,7 @@
 
 ## Active tasks
 
-- Phase 1: `src/lib/config.ts`, `src/lib/db/schema.ts` (9 tables), `DATABASE_URL` abstraction (postgres.js | PGlite), `drizzle.config.ts`, migration generation + apply, `scripts/seed.ts`.
+- None — implementation is complete; awaiting owner-configured Hedera acceptance testing.
 
 ## Blocked tasks
 
