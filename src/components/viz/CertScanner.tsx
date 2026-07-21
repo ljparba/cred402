@@ -14,7 +14,7 @@ import type { ReactNode } from "react";
 
 function CertificateArt({ studentName = "Jane Doe", course = "Data Structures & Algorithms" }: { studentName?: string; course?: string }) {
   return (
-    <svg viewBox="0 0 320 220" className="h-full w-full" role="img" aria-label="Sample certificate">
+    <svg viewBox="0 0 320 220" className="block h-full w-full max-w-full" role="img" aria-label="Sample certificate">
       <defs>
         <linearGradient id="cert-paper" x1="0" y1="0" x2="1" y2="1">
           <stop offset="0" stopColor="#eef3fb" />
@@ -114,7 +114,7 @@ export function CertScanner({
       )}
 
       <div
-        className="relative overflow-hidden rounded-xl border p-4 sm:p-6"
+        className="relative w-full min-w-0 max-w-full overflow-hidden rounded-xl border p-4 sm:p-6"
         style={{
           borderColor: `color-mix(in srgb, ${toneColor} 30%, transparent)`,
           background: "linear-gradient(180deg, rgba(6,12,26,0.9), rgba(4,8,18,0.95))",
@@ -131,8 +131,9 @@ export function CertScanner({
           />
         ))}
 
-        {/* Certificate + scan line */}
-        <div className="relative mx-auto aspect-[320/220] w-full max-w-md overflow-hidden rounded-md">
+        {/* Certificate + scan line — full-width and shrink-safe on mobile; only
+            capped to a comfortable size from sm up (never wider than the parent). */}
+        <div className="relative mx-auto aspect-[320/220] w-full min-w-0 max-w-full overflow-hidden rounded-md sm:max-w-md">
           <CertificateArt studentName={studentName} course={course} />
 
           {scanning && !reduce && (

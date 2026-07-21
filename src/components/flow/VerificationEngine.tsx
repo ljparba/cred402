@@ -104,15 +104,18 @@ export function VerificationEngine({
         </span>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,0.85fr)_minmax(0,1.3fr)_minmax(0,0.95fr)]">
+      {/* One column by default; the desktop 3-column layout only activates at xl.
+          Every direct child + card is w-full/min-w-0/max-w-full so no inner child
+          (hash text, check card, log line) can render wider than the viewport. */}
+      <div className="grid w-full min-w-0 max-w-full grid-cols-1 gap-6 xl:grid-cols-[minmax(0,0.8fr)_minmax(0,1.3fr)_minmax(0,0.9fr)]">
         {/* ── Left: certificate preview + meta ───────────────────────────── */}
-        <div className="flex flex-col gap-5">
-          <GlassPanel className="p-5">
+        <div className="flex w-full min-w-0 max-w-full flex-col gap-5">
+          <GlassPanel className="w-full min-w-0 max-w-full overflow-hidden p-5">
             <SectionLabel>Certificate Preview</SectionLabel>
             <div className="mt-4">
-              <CertScanner scanning label="" className="[&_*]:!shadow-none" />
+              <CertScanner scanning label="" className="w-full min-w-0 max-w-full [&_*]:!shadow-none" />
             </div>
-            <div className="mt-4 rounded-xl border border-border bg-[color:rgba(5,9,18,0.7)] p-3">
+            <div className="mt-4 w-full min-w-0 max-w-full overflow-hidden rounded-xl border border-border bg-[color:rgba(5,9,18,0.7)] p-3">
               <p className="text-[0.65rem] font-semibold uppercase tracking-wider text-ink-faint">SHA-256 Hash</p>
               <CopyHash value={uploadedHash} label="uploaded hash" className="mt-1.5 w-full justify-between" />
               <p className="mt-2 text-xs font-medium text-brand-2">Verification in progress…</p>
@@ -121,8 +124,8 @@ export function VerificationEngine({
         </div>
 
         {/* ── Centre: the six checks ─────────────────────────────────────── */}
-        <GlassPanel className="flex flex-col p-5 sm:p-6">
-          <ol className="space-y-2">
+        <GlassPanel className="flex w-full min-w-0 max-w-full flex-col p-5 sm:p-6">
+          <ol className="w-full min-w-0 space-y-2">
             {checks.map((c, i) => {
               const isResolved = i < resolved;
               const isActive = i === activeIdx && i >= resolved;
@@ -131,7 +134,7 @@ export function VerificationEngine({
                 <li
                   key={c.id}
                   className={cn(
-                    "rounded-xl border p-4 transition-colors",
+                    "w-full min-w-0 max-w-full overflow-hidden rounded-xl border p-4 transition-colors",
                     isResolved ? "border-border bg-[color:rgba(8,14,28,0.5)]" : "border-transparent",
                   )}
                 >
@@ -146,18 +149,18 @@ export function VerificationEngine({
                     </span>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between gap-2">
-                        <p className={cn("text-sm font-semibold", isResolved ? "text-ink" : "text-ink-dim")}>
+                        <p className={cn("min-w-0 break-words text-sm font-semibold", isResolved ? "text-ink" : "text-ink-dim")}>
                           {c.label}
                         </p>
                         {isResolved ? (
-                          <span className={cn("text-xs font-semibold", meta.text)}>{c.status}</span>
+                          <span className={cn("shrink-0 text-xs font-semibold", meta.text)}>{c.status}</span>
                         ) : isActive ? (
-                          <Loader2 className="h-4 w-4 animate-spin text-brand-2" />
+                          <Loader2 className="h-4 w-4 shrink-0 animate-spin text-brand-2" />
                         ) : (
-                          <span className="text-xs text-ink-faint">PENDING</span>
+                          <span className="shrink-0 text-xs text-ink-faint">PENDING</span>
                         )}
                       </div>
-                      <p className="mt-0.5 text-xs leading-relaxed text-ink-dim">
+                      <p className="mt-0.5 break-words text-xs leading-relaxed text-ink-dim">
                         {isResolved ? c.evidence : `${WORKING_LABEL[c.id] ?? c.label}…`}
                       </p>
                       {isResolved && (
@@ -175,12 +178,12 @@ export function VerificationEngine({
           </ol>
 
           {/* orbit viz */}
-          <div className="mt-4 grid place-items-center">
-            <HederaNetworkViz className="h-28 w-full max-w-sm opacity-80" />
+          <div className="mt-4 grid w-full min-w-0 max-w-full place-items-center">
+            <HederaNetworkViz className="h-28 w-full min-w-0 max-w-sm opacity-80" />
           </div>
 
           {/* overall progress */}
-          <div className="mt-4 rounded-xl border border-border bg-[color:rgba(5,9,18,0.6)] p-4">
+          <div className="mt-4 w-full min-w-0 max-w-full rounded-xl border border-border bg-[color:rgba(5,9,18,0.6)] p-4">
             <div className="flex items-center justify-between text-sm">
               <span className="font-semibold text-brand-2">Overall Progress</span>
               <span className="font-mono text-ink">{progress}%</span>
@@ -196,23 +199,23 @@ export function VerificationEngine({
         </GlassPanel>
 
         {/* ── Right: logs + proof/trace panels ───────────────────────────── */}
-        <div className="flex flex-col gap-5">
+        <div className="flex w-full min-w-0 max-w-full flex-col gap-5">
           <SystemLog lines={logs} live={resolved < checks.length} />
 
-          <GlassPanel className="p-5">
+          <GlassPanel className="w-full min-w-0 max-w-full overflow-hidden p-5">
             <SectionLabel>Proof &amp; Trace</SectionLabel>
-            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div className="rounded-lg border border-border bg-[color:rgba(5,9,18,0.6)] p-3">
+            <div className="mt-4 grid w-full min-w-0 max-w-full grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="min-w-0 max-w-full overflow-hidden rounded-lg border border-border bg-[color:rgba(5,9,18,0.6)] p-3">
                 <p className="text-[0.65rem] font-semibold uppercase tracking-wider text-ink-faint">HCS Evidence</p>
                 <p className="mt-1 truncate font-mono text-xs text-brand-ink">
                   {report.hcs?.sequenceNumber != null ? `seq ${report.hcs.sequenceNumber}` : "—"}
                 </p>
               </div>
-              <div className="rounded-lg border border-border bg-[color:rgba(5,9,18,0.6)] p-3">
+              <div className="min-w-0 max-w-full overflow-hidden rounded-lg border border-border bg-[color:rgba(5,9,18,0.6)] p-3">
                 <p className="text-[0.65rem] font-semibold uppercase tracking-wider text-ink-faint">Consensus Tx</p>
                 <p className="mt-1 truncate font-mono text-xs text-brand-ink">{topic ?? "pending (testnet keys)"}</p>
               </div>
-              <div className="col-span-2 rounded-lg border border-border bg-[color:rgba(5,9,18,0.6)] p-3">
+              <div className="col-span-1 min-w-0 max-w-full overflow-hidden rounded-lg border border-border bg-[color:rgba(5,9,18,0.6)] p-3 sm:col-span-2">
                 <p className="text-[0.65rem] font-semibold uppercase tracking-wider text-ink-faint">Verification Trace</p>
                 <p className="mt-1 truncate font-mono text-xs text-ink-dim">
                   request {report.requestId}

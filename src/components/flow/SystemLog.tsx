@@ -41,7 +41,7 @@ export function SystemLog({ lines, live }: { lines: LogLine[]; live: boolean }) 
   }, [lines.length]);
 
   return (
-    <div className="flex h-full flex-col rounded-2xl border border-border bg-[color:rgba(4,7,14,0.85)] p-4">
+    <div className="flex h-full w-full min-w-0 max-w-full flex-col overflow-hidden rounded-2xl border border-border bg-[color:rgba(4,7,14,0.85)] p-4">
       <div className="flex items-center justify-between">
         <SectionLabel>Live System Logs</SectionLabel>
         {live && (

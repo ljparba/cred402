@@ -78,9 +78,12 @@ export function UploadScan({
         <StepProgress current={stepIndex} className="lg:mb-1" />
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_minmax(0,0.85fr)]">
+      {/* One column by default; the 3-column layout only activates at a true
+          desktop breakpoint (xl). Every direct child is w-full/min-w-0/max-w-full
+          so nothing can render wider than the mobile content column. */}
+      <div className="grid w-full min-w-0 max-w-full grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_minmax(0,0.85fr)]">
         {/* ── Left: dropzone ─────────────────────────────────────────────── */}
-        <GlassPanel className="p-5 sm:p-6">
+        <GlassPanel className="w-full min-w-0 max-w-full overflow-hidden p-5 sm:p-6">
           <UploadDropzone
             onFile={onFile}
             disabled={scanning}
@@ -89,9 +92,10 @@ export function UploadScan({
         </GlassPanel>
 
         {/* ── Centre: scanner + actions ──────────────────────────────────── */}
-        <div className="flex flex-col gap-5">
-          <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
+        <div className="flex w-full min-w-0 max-w-full flex-col gap-5">
+          <div className="grid w-full min-w-0 max-w-full grid-cols-1 items-center gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
             <CertScanner
+              className="w-full min-w-0 max-w-full"
               scanning={scanning || identified}
               tone={phase === "error" ? "danger" : identified ? "ok" : "brand"}
               label={identified ? "Scan Complete" : scanning ? "Scanning Certificate" : "Ready to Scan"}
@@ -123,7 +127,7 @@ export function UploadScan({
             <motion.div
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
-              className="rounded-xl border border-border bg-[color:rgba(5,9,18,0.7)] p-4"
+              className="w-full min-w-0 max-w-full overflow-hidden rounded-xl border border-border bg-[color:rgba(5,9,18,0.7)] p-4"
             >
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="text-[0.65rem] font-semibold uppercase tracking-wider text-ink-faint">
@@ -155,14 +159,14 @@ export function UploadScan({
           {error && (
             <div
               role="alert"
-              className="flex items-center gap-2 rounded-xl border border-[color:rgba(239,68,68,0.4)] bg-[color:rgba(239,68,68,0.08)] px-4 py-3 text-sm text-danger-soft"
+              className="flex w-full min-w-0 max-w-full items-center gap-2 rounded-xl border border-[color:rgba(239,68,68,0.4)] bg-[color:rgba(239,68,68,0.08)] px-4 py-3 text-sm text-danger-soft"
             >
-              <AlertCircle className="h-4 w-4 shrink-0" /> {error}
+              <AlertCircle className="h-4 w-4 shrink-0" /> <span className="min-w-0 break-words">{error}</span>
             </div>
           )}
 
           {/* actions — full-width on mobile, natural width from sm up */}
-          <div className="flex flex-wrap gap-3">
+          <div className="flex w-full min-w-0 max-w-full flex-wrap gap-3">
             {identified ? (
               <Button size="lg" className="w-full sm:w-auto" onClick={onContinue}>
                 Continue to Payment <ArrowRight className="h-4.5 w-4.5" />
@@ -189,7 +193,7 @@ export function UploadScan({
         </div>
 
         {/* ── Right: sample files → scan process → issuer hints ──────────── */}
-        <div className="flex flex-col gap-5">
+        <div className="flex w-full min-w-0 max-w-full flex-col gap-5">
           {/* Sample Files — ALL samples, every one selectable directly (no
               browse-all link). Internal scroll only as a sidebar at xl+; on
               mobile/tablet it stays in normal document flow (no nested scroll

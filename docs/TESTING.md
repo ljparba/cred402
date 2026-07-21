@@ -16,7 +16,7 @@ suite with the `test` script:
 npm test
 ```
 
-This runs all **58 tests** across the seven files below (the script lists the files explicitly so it
+This runs all **67 tests** across the seven files below (the script lists the files explicitly so it
 works identically on Windows, macOS, and Linux — a bare `tests/*.test.ts` glob is not expanded by
 Node's `--test` on every shell).
 
@@ -41,7 +41,7 @@ PGLITE_DATA_DIR=./.pglite-test node --import tsx --test tests/engine.test.ts
 **Prerequisite for the engine test:** the sample PDFs must exist and the catalogue hashes must be
 generated, because it hashes the real files. Run `npm run certs:generate` first if you haven't.
 
-> **58 tests currently pass** across the seven files below.
+> **67 tests currently pass** across the seven files below.
 
 ---
 
@@ -55,7 +55,7 @@ generated, because it hashes the real files. Run `npm run certs:generate` first 
 | `tests/hedera.test.ts` | **HCS helpers** — `toDashedTxId` (`@`-form → dashed, preserving account-id dots; idempotent; accepts a `TransactionId`-like object — a real bug was caught here); HashScan URL formats; HCS envelope builders (`buildIssuedEvent` omits `expiresAt` when absent; `buildRevokedEvent` chains to the issuance event). |
 | `tests/config.test.ts` | **Price formatting** — `tinybarsToHbar`: `10000000` → `0.1`; whole HBAR has no fraction; trailing zeros trimmed; zero. |
 | `tests/demo.test.ts` | **Create Tamper Demo** (DB-backed, offline) — synthetic registration under the forced demo issuer, the original→VALID / modified+id→TAMPERED / modified-no-id→UNKNOWN / unknown-id→UNKNOWN matrix, label sanitisation, and the DB-backed rate limiter. |
-| `tests/frontend-layout.test.ts` | **Layout & navigation guards** (structural, 24 checks) — header logo is a real `/` route link with `onLogoClick`; hero shows Live Activity (redundant proof panel removed); homepage 35/65 row + Tamper Demo section; **sample grid 1/2/3-col at mobile/laptop/1536px+ with the status badge above the title and the full “Use this sample” label**; **compact laptop header** (lg breakpoint, shortened badge, hidden redundant icon); upload sidebar order + no “View All”; **Begin Scan full-width on mobile** + sidebar scroll gated to xl; report Reference-Samples removal + layout; and the mobile scan-progress fix (order, `min-w-0`/safe wrapping, log scrolls its own container, no fixed/`100vh` trap). No DOM runner — it reads component source and asserts stable tokens. |
+| `tests/frontend-layout.test.ts` | **Layout & navigation guards** (structural, 33 checks) — header logo is a real `/` route link with `onLogoClick`; hero shows Live Activity (redundant proof panel removed); homepage 35/65 row + Tamper Demo section; **sample grid 1/2/3-col at mobile/laptop/1536px+ with the status badge above the title and the full “Use this sample” label**; **compact laptop header** (lg breakpoint, shortened badge, hidden redundant icon); upload sidebar order + no “View All”; **Begin Scan full-width on mobile** + sidebar scroll gated to xl; report Reference-Samples removal + layout; and the **mobile width-overflow fix** (both scan-state grids default 1-col with 3-col only at xl; wrappers/cards/preview media are `w-full min-w-0 max-w-full`; the stepper is a shrink-safe `grid-cols-4` with no fixed-width connectors; no fixed-pixel/min widths; log scrolls its own container; no fixed/`100vh` trap). No DOM runner — it reads component source and asserts stable tokens. |
 
 The engine test seeds an isolated DB in a `before()` hook (migrate → seed) so verdicts are computed
 against the same registry the app uses, with a **fixed clock** (`2026-07-20`) so expired/valid
@@ -142,7 +142,7 @@ npm run db:setup
 npm run certs:generate
 npm run db:seed
 npm run verify:samples
-npm test                                   # 58 tests
+npm test                                   # 67 tests
 npm run lint
 npm run typecheck
 npm run build

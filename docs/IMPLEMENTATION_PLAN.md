@@ -421,13 +421,27 @@ Continue buttons full-width on mobile** (`w-full sm:w-auto`), 16px page padding,
 list back in **normal document flow** on mobile (its internal scroll is gated to `xl:` so there's no
 nested scroll trap). Long filenames wrap (`break-words`). All upload validation/scan behavior intact.
 
+**Width-overflow root-cause fix.** The concrete overflow source was the 4-step **progress rail**: a
+non-`w-full`, `justify-center` flex with **fixed-width connectors** (`w-8` / `sm:w-14`) and
+non-shrinking labels, giving it a ~340px intrinsic width that overflowed a ~288–360px phone column.
+`StepProgress` is rebuilt as a shrink-safe `grid w-full min-w-0 grid-cols-4` rail — connectors are
+half-width absolutely-positioned lines flanking each circle (no fixed widths), labels `truncate`. In
+addition, the main workspace grid is `grid-cols-1` (3-col only at `xl`), the inner scanner grid is
+`grid-cols-1` (2-up only from `sm`, dropping the phantom `auto` track on mobile), and **every** grid/
+flex child + `motion.div` + card carries `w-full min-w-0 max-w-full` (cards `overflow-hidden`). The
+certificate preview media is `w-full min-w-0 max-w-full`, capped to a comfortable size only from `sm`
+(`sm:max-w-md`) so it can never exceed a narrow parent. No fixed-pixel or `min-w-[…]` utilities remain
+in the scan-state tree (only the page container's `max-w-[1440px]`).
+
 ### 10.4 Post-payment Verification Progress mobile
-Already single-column below `xl` in the correct order (title → certificate preview → checks → overall
-progress → live logs → Proof & Trace). Hardened for narrow screens: `min-w-0` on the log line text so
-it ellipsizes instead of forcing width, Proof & Trace stacks (`grid-cols-1 sm:grid-cols-2`), and the
-log auto-scroll (from §9.6) only moves the log container — never the page. No `position: fixed`, no
-`100vh`/`h-screen`, no body scroll-lock; the page scrolls freely while processing; reduced-motion
-preserved.
+Single-column below `xl` in the correct order (title → certificate preview → checks → overall
+progress → live logs → Proof & Trace). Same width-overflow audit as §10.3: the main grid is
+`grid-cols-1` (3-col only at `xl`); every column, check card, progress wrapper, log panel, and Proof &
+Trace card is `w-full min-w-0 max-w-full` (`overflow-hidden` on cards); check labels/evidence
+`break-words`; hashes use `min-w-0`/`truncate`/`break-all`; Proof & Trace stacks
+(`grid-cols-1 sm:grid-cols-2`). The log auto-scroll (from §9.6) only moves the log container — never
+the page. No `position: fixed`, no `100vh`/`h-screen`, no body scroll-lock; the page scrolls freely
+while processing; reduced-motion preserved.
 
 ### 10.5 Security review (verify-and-preserve; no code changes)
 Confirmed intact: **secrets** — no secret **values** reach the client bundle (`/` client chunks were

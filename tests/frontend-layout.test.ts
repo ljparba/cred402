@@ -24,6 +24,9 @@ const page = read("src/app/page.tsx");
 const hero = read("src/components/sections/Hero.tsx");
 const samples = read("src/components/sections/Samples.tsx");
 const uploadScan = read("src/components/flow/UploadScan.tsx");
+const uploadDropzone = read("src/components/flow/UploadDropzone.tsx");
+const stepProgress = read("src/components/flow/StepProgress.tsx");
+const certScanner = read("src/components/viz/CertScanner.tsx");
 const report = read("src/components/flow/Report.tsx");
 const systemLog = read("src/components/flow/SystemLog.tsx");
 const verificationEngine = read("src/components/flow/VerificationEngine.tsx");
@@ -231,4 +234,75 @@ test("verification progress protects long values (min-w-0 + safe wrapping)", () 
   assert.match(verificationEngine, /break-all|break-words|truncate/);
   // The log line text can shrink/ellipsize instead of forcing width.
   assert.match(systemLog, /min-w-0 truncate/);
+});
+
+// ── Mobile width-overflow root-cause fix (mobile-width-overflow prompt) ────────
+
+/** No fixed-pixel width utilities (only the page container's max-w-[1440px]). */
+function assertNoFixedWidths(name: string, src: string) {
+  assert.doesNotMatch(src, /\bmin-w-\[/, `${name}: no fixed min-width utilities on mobile`);
+  assert.doesNotMatch(src, /minWidth/, `${name}: no inline minWidth`);
+  for (const w of src.match(/\b(?:w|max-w)-\[[^\]]+\]/g) ?? []) {
+    assert.equal(w, "max-w-[1440px]", `${name}: unexpected fixed width utility ${w}`);
+  }
+}
+
+test("scan states carry no fixed-pixel/min widths that can overflow mobile", () => {
+  assertNoFixedWidths("UploadScan", uploadScan);
+  assertNoFixedWidths("VerificationEngine", verificationEngine);
+  assertNoFixedWidths("StepProgress", stepProgress);
+  assertNoFixedWidths("CertScanner", certScanner);
+  assertNoFixedWidths("UploadDropzone", uploadDropzone);
+  assertNoFixedWidths("SystemLog", systemLog);
+});
+
+test("upload main grid is one column by default; 3-col only at xl, and shrink-safe", () => {
+  assert.match(uploadScan, /grid w-full min-w-0 max-w-full grid-cols-1[\s\S]*?xl:grid-cols-\[/);
+  // No earlier (md/lg) multi-column activation for the main workspace grid.
+  assert.doesNotMatch(uploadScan, /(?:md|lg):grid-cols-\[minmax/);
+});
+
+test("upload direct grid children + scanner grid are w-full/min-w-0/max-w-full", () => {
+  // Dropzone card, centre column, sidebar column, and the inner scanner grid.
+  const shrinkSafe = uploadScan.match(/w-full min-w-0 max-w-full/g) ?? [];
+  assert.ok(shrinkSafe.length >= 5, `expected several shrink-safe wrappers, got ${shrinkSafe.length}`);
+  // The inner scanner grid is single column on mobile, 2-up only from sm.
+  assert.match(uploadScan, /grid w-full min-w-0 max-w-full grid-cols-1 items-center[\s\S]*?sm:grid-cols-\[/);
+});
+
+test("step progress is a shrink-safe 4-col grid with no fixed-width connectors", () => {
+  assert.match(stepProgress, /grid w-full min-w-0 max-w-full grid-cols-4/);
+  assert.match(stepProgress, /min-w-0[\s\S]*?flex-col/); // each step shrinks
+  // The old fixed-width connectors (w-8 / sm:w-14) are gone.
+  assert.doesNotMatch(stepProgress, /w-8 sm:w-14/);
+  assert.doesNotMatch(stepProgress, /\bw-14\b/);
+});
+
+test("dropzone selected filename wraps instead of forcing width", () => {
+  assert.match(uploadDropzone, /break-words[\s\S]*?selected\.name/);
+});
+
+test("certificate preview media is shrink-safe (max-w-full, capped only from sm)", () => {
+  assert.match(certScanner, /w-full min-w-0 max-w-full[\s\S]*?sm:max-w-md/);
+  // Never an unconditional max-w-md that could exceed a narrow parent.
+  assert.doesNotMatch(certScanner, /w-full max-w-md\b/);
+  assert.match(certScanner, /block h-full w-full max-w-full/); // the SVG itself
+});
+
+test("verification progress main grid is one column by default; 3-col only at xl", () => {
+  assert.match(verificationEngine, /grid w-full min-w-0 max-w-full grid-cols-1[\s\S]*?xl:grid-cols-\[/);
+  assert.doesNotMatch(verificationEngine, /(?:md|lg):grid-cols-\[minmax/);
+});
+
+test("verification check cards are full-width and shrink-safe", () => {
+  assert.match(verificationEngine, /w-full min-w-0 max-w-full overflow-hidden rounded-xl border/);
+  // check label + evidence wrap rather than forcing width
+  assert.match(verificationEngine, /min-w-0 break-words text-sm font-semibold/);
+  assert.match(verificationEngine, /break-words text-xs leading-relaxed/);
+});
+
+test("system log panel is contained and scrolls its own container", () => {
+  assert.match(systemLog, /w-full min-w-0 max-w-full[\s\S]*?overflow-hidden[\s\S]*?rounded-2xl/);
+  assert.doesNotMatch(systemLog, /\.scrollIntoView\s*\(/);
+  assert.match(systemLog, /el\.scrollTop = el\.scrollHeight/);
 });
