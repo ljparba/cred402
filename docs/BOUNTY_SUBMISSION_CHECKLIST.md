@@ -15,7 +15,10 @@ Related: [OWNER_ACCEPTANCE_TEST.md](OWNER_ACCEPTANCE_TEST.md), [DEMO_SCRIPT.md](
 - [x] `npm test` — **86/86 tests pass** (52 frontend guards; DB suites exit naturally) — verified
 - [x] `npm run verify:samples` — all **7/7** samples classify correctly — verified
 - [x] `npm run build` succeeds — verified
-- [ ] `npm run start` boots the production build — *owner (production smoke test, not yet run here)*
+- [x] `npm run start` boots the production build — verified (Phase 3: booted on a dedicated local
+      port; `/`, `/how-it-works`, `/api/health`, `/api/samples`, sample downloads, `POST /api/verify`
+      locked preview, unpaid **402**, configured-mode `?demo=1` ignored, and safe typed error paths all
+      passed; server stopped cleanly, no orphan, main `.pglite` untouched).
 
 ## 2. Repository
 

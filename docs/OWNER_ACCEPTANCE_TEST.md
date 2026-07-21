@@ -29,8 +29,19 @@ acceptance script). The **actual owner-verified state as of this handoff** is:
 - ✅ **Automated gates**: `npm test` **86/86** (frontend-layout **52** structural guards), with the
   DB-backed suites now closing PGlite and returning to the prompt naturally; `verify:samples` **7/7**;
   typecheck, lint, and the production build all pass.
-- ⏳ **Part B — replay rejection (B6) and idempotent re-access (B7)**: exercise the settlement path but
-  are **not separately recorded as run** here — the owner should tick them only after running them.
+- ✅ **Phase 3 — local production verification (`npm run start`)**: the built app boots on a dedicated
+  local port; `/` + `/how-it-works` → 200 with branding; `/api/health` → `status:"ok"`, `db.ok:true`,
+  configured mode, safe booleans/public endpoints only (no secret leak); `/api/samples` → 7 samples;
+  sample PDFs download (`application/pdf`, non-empty); `POST /api/verify` → **locked** preview with **no
+  verdict/checks**; unpaid `GET /api/report/{id}` → **genuine HTTP 402** (x402 v2, `PAYMENT-REQUIRED`
+  header, no report leak); **configured mode ignores `?demo=1`** (still 402); error paths → safe typed
+  404/415/400 (no stack traces/paths/SQL). Server stopped cleanly (no orphan); smoke ran against an
+  isolated seeded DB, so the main `.pglite` was untouched.
+- ⏳ **Part B — replay rejection (B6) and idempotent re-access (B7)**: still **not run**. B6 needs a
+  previously-captured `PAYMENT-SIGNATURE` payload (not persisted, and a new one must not be created);
+  B7 needs a previously-paid request (no reusable artifact was available). The owner runs B6/B7 later —
+  a new live testnet settlement requires explicit owner authorization; do not tick them from code
+  inspection alone.
 
 Remaining owner-controlled actions: public GitHub push, Render configuration/deploy + deployed-site
 test, production secrets, demo-video recording/upload, and the final bounty submission. Mainnet

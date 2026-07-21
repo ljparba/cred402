@@ -125,10 +125,11 @@ actions). Automated tests still run on the offline/deterministic path (they neve
 
 ## Active tasks
 
-- None — implementation and responsive owner acceptance are complete. Remaining work is
-  owner-controlled and external: Phase 2 repository-readiness/security audit, Phase 3 production
-  verification, Phase 4 deployment + submission (public GitHub push, Render deploy, test the deployed
-  site, record/upload the demo video, submit the bounty).
+- None — implementation, responsive owner acceptance, **Phase 2 security/repository-readiness audit
+  (COMPLETE)**, and **Phase 3 production verification (COMPLETE)** are all done. The only remaining
+  work is **Phase 4 deployment + submission** (owner-controlled/external): decide whether the
+  development prompt files stay public, public GitHub push, Render configuration/deployment, deployed-
+  site verification, record the public evidence values, demo video, and the bounty submission.
 
 ## Blocked tasks
 
@@ -154,9 +155,10 @@ actions). Automated tests still run on the offline/deterministic path (they neve
 
 ## Next autonomous action
 
-None required — implementation is complete and owner-accepted. Optional future follow-ups (Phase 2/3):
-extend the suite with live x402 integration tests; add edge/server rate limiting on `/api/verify`
-before any public/production (non-testnet) use.
+None required — implementation is complete and owner-accepted; Phases 2 (security/repository readiness)
+and 3 (production verification) are complete. Optional future follow-ups: extend the suite with live
+x402 integration tests; add edge/server rate limiting on `/api/verify` before any public/production
+(non-testnet) use; split `publicConfig` into a dedicated client-safe module (non-blocking hygiene).
 
 ## Owner-required actions
 
@@ -175,10 +177,27 @@ deployment + submission:
 
 ## Final readiness status
 
-`HANDOFF-READY` — everything runs end-to-end and the responsive/mobile owner acceptance is complete.
-In unconfigured mode a reviewer gets a real 402 challenge + a clearly-labelled simulated report with
-no keys; with the owner's testnet keys, **live HCS anchoring and real x402 settlement have been
-owner-verified on Hedera Testnet** (Mirror-confirmed, HashScan proof). Remaining before submission:
-Phase 2 repository readiness, Phase 3 production verification, and Phase 4 deployment/submission —
-public GitHub push, Render deploy + deployed-site test, demo video, and bounty submission. Scope stays
-a Hedera Testnet proof of concept.
+`HANDOFF-READY` — everything runs end-to-end; responsive/mobile owner acceptance, **Phase 2 security
+and repository readiness**, and **Phase 3 production verification** are all **COMPLETE**. In
+unconfigured mode a reviewer gets a real 402 challenge + a clearly-labelled simulated report with no
+keys; with the owner's testnet keys, **live HCS anchoring and real x402 settlement have been
+owner-verified on Hedera Testnet** (Mirror-confirmed, HashScan proof).
+
+**Phase 3 production verification (local, `npm run start`) — passed:** built app boots on a dedicated
+port; `/` and `/how-it-works` → 200 with branding; `/api/health` → `status:"ok"`, `db.ok:true`,
+configured mode, safe booleans/public endpoints only (no secret leak); `/api/samples` → 7 samples;
+sample PDFs download (`application/pdf`, non-empty); `POST /api/verify` returns a **locked** preview
+with **no verdict/checks**; unpaid `GET /api/report/{id}` returns a **genuine HTTP 402** (x402 v2,
+`PAYMENT-REQUIRED` header, no report leak); configured mode **ignores `?demo=1`** (still 402); error
+paths return safe typed 404/415/400 with no stack traces/paths/SQL. Server stopped cleanly, no orphan,
+main `.pglite` untouched (smoke tests ran against an isolated seeded DB).
+
+**B6 replay rejection / B7 idempotent re-access — still OPEN (not run):** B6 needs a previously
+captured `PAYMENT-SIGNATURE` payload, which is not persisted and must not be newly created; B7 needs a
+previously-paid request, and no reusable paid-request artifact was available. Owner runs these later
+(see `OWNER_ACCEPTANCE_TEST.md` B6/B7) — a new live testnet settlement requires explicit owner
+authorization.
+
+Remaining: **Phase 4 deployment + submission** — decide on the development prompt files, public GitHub
+push, Render configuration/deployment + deployed-site verification, record the public evidence values,
+demo video, and bounty submission. Scope stays a Hedera Testnet proof of concept.
