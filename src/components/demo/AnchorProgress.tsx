@@ -60,7 +60,7 @@ export function AnchorProgress({
   }, [active, done, reduce]);
 
   return (
-    <ol className="space-y-2.5" aria-label="Anchoring progress" aria-live="polite">
+    <ol className="w-full min-w-0 max-w-full space-y-2.5" aria-label="Anchoring progress" aria-live="polite">
       {ANCHOR_STAGES.map((label, i) => {
         const isComplete = done || i < stage;
         const isCurrent = !done && i === stage;
@@ -69,7 +69,7 @@ export function AnchorProgress({
         const skipped = done && hcsStage && !anchored;
 
         return (
-          <li key={label} className="flex items-center gap-3">
+          <li key={label} className="flex min-w-0 max-w-full items-start gap-3">
             <span className="grid h-6 w-6 shrink-0 place-items-center">
               {skipped ? (
                 <Circle className="h-4 w-4 text-ink-faint" />
@@ -89,7 +89,7 @@ export function AnchorProgress({
             </span>
             <span
               className={cn(
-                "text-sm",
+                "min-w-0 break-words text-sm",
                 skipped
                   ? "text-ink-faint"
                   : isComplete

@@ -9,6 +9,20 @@
 
 ## Current phase
 
+**Tamper Demo mobile full-width fix — `COMPLETE (implementation)` (2026-07-21):** the final mobile
+pass, limited to the **Create Tamper Demo** flow inside `/how-it-works`. Root cause: the step
+containers used `grid gap-6 lg:grid-cols-2`, which on mobile is a single **`auto`-sized** implicit
+column that grows to its widest child — combined with the Demo ID / Original Hash rendered in a
+**truncating** `CopyHash` and CTA buttons with the Button's built-in `whitespace-nowrap`, long values
+and long labels forced cards wider than the viewport. Fixes: step grids are now explicit
+`grid-cols-1` (3-col only at `lg`); every wrapper/card is `w-full min-w-0 max-w-full` with
+`overflow-hidden`; the step rail is a shrink-safe `grid-cols-2 → sm:3 → lg:6` (labels visible + wrap);
+the shared `CopyHash` gained a **`wrap` mode** (`break-all`, no truncation) used by the Demo ID / hash
+fields so they stay fully visible and contained; `AnchorProgress` rows are `items-start` +
+`min-w-0 break-words`; instruction rows, label chips, and the `HashDiff` byte view wrap; and CTA
+buttons are full-width with `whitespace-normal text-center` (the longest label shortened to "Continue
+with modified copy"). No Tamper Demo behavior changed. Details: `IMPLEMENTATION_PLAN.md` §10.9.
+
 **Payment page + footer/status-bar mobile fix — `COMPLETE (implementation)` (2026-07-21):** the final
 mobile pass, limited to the **402 payment page** and the **footer + bottom network status bar**. The
 402 card, payment stepper, and Wallet→API→Hedera diagram are now fully contained on mobile: both are
@@ -91,8 +105,8 @@ actions). Automated tests still run on the offline/deterministic path (they neve
 | 4 | Verification engine + protected API | `COMPLETE` | Engine classifies all 7 samples correctly (`verify:samples` → VALID×2/TAMPERED/EXPIRED/REVOKED/UNREGISTERED_ISSUER/UNKNOWN). Live dev-server smoke test: `/api/verify` returns locked preview with NO verdict leaked; `/api/samples`, `/api/samples/[slug]` (serves PDF), `/api/activity`, `/api/health` all 200; invalid upload → 415. PGlite works under Next via `serverExternalPackages` |
 | 5 | x402 flow | `COMPLETE` | Genuine x402 v2: `GET /api/report/[id]` with no payment → **HTTP 402** carrying a valid `PAYMENT-REQUIRED` header (scheme exact / hedera:testnet / asset 0.0.0 / amount 10000000 / maxTimeout 180) with a **real `extra.feePayer: 0.0.9185802` injected live by x402.org's public facilitator**. No verdict/checks leak pre-payment. Replay-check-first → verify → settle → independent Mirror proof → UNIQUE-tx binding. Rejections verified: 404 REQUEST_NOT_FOUND, 400 BAD_PAYMENT_SIGNATURE, 400 pay-unconfigured. `tsc` clean. **Live x402 settlement owner-verified on Hedera Testnet** — real fee-sponsored HBAR settlement, independent Mirror Node confirmation (SUCCESS + exact-amount credit), HashScan proof observed |
 | 6 | Frontend + animations | `COMPLETE` | Components covering all 5 mockup states (hero/scan/402/engine/report), rebranded to Cred402, new SVG logo, framer-motion animations, `prefers-reduced-motion` honoured, responsive, a11y (aria-live/focus/keyboard). `next build` succeeds. Live prod check: page renders all sections; full flow works (tampered → `?demo=1` → verdict TAMPERED with hash-diff + 6 checks). Layout later refined — see §9/§10 for the current homepage, header, sample-card, and mobile behavior |
-| 7 | Test suite | `PASS` | `npm test` → **77 tests pass** (Node built-in runner + tsx, no new deps): hash 5 / config 4 / upload 7 / hedera 6 / engine 7 (all six credential states vs real PDFs) / demo 5 / frontend-layout 43 (structural UI/nav/responsive guards). DB-backed suites self-isolate (`./.pglite-test`, `./.pglite-demotest`) |
-| 8 | Fix, harden, retest | `COMPLETE` | Production gates all green: no hardcoded secrets/keys in source; no server secret under `NEXT_PUBLIC`; `tsc --noEmit` 0 errors; `eslint` clean; `npm test` 77/77; `next build` succeeds; live prod smoke test passes |
+| 7 | Test suite | `PASS` | `npm test` → **86 tests pass** (Node built-in runner + tsx, no new deps): hash 5 / config 4 / upload 7 / hedera 6 / engine 7 (all six credential states vs real PDFs) / demo 5 / frontend-layout 52 (structural UI/nav/responsive guards). DB-backed suites self-isolate (`./.pglite-test`, `./.pglite-demotest`) |
+| 8 | Fix, harden, retest | `COMPLETE` | Production gates all green: no hardcoded secrets/keys in source; no server secret under `NEXT_PUBLIC`; `tsc --noEmit` 0 errors; `eslint` clean; `npm test` 86/86; `next build` succeeds; live prod smoke test passes |
 | 9 | Docs + handoff | `COMPLETE` | 13 files: README + 12 docs (ARCHITECTURE, HEDERA_SETUP, X402_FLOW, DATABASE, LOCAL_SETUP, RENDER_DEPLOYMENT, TESTING, OWNER_ACCEPTANCE_TEST, DEMO_SCRIPT, BOUNTY_SUBMISSION_CHECKLIST, KNOWN_LIMITATIONS). Cross-linked; correctly branded |
 
 ---
@@ -116,7 +130,7 @@ actions). Automated tests still run on the offline/deterministic path (they neve
 
 ## Test status
 
-- `npm test` → **77/77 pass** (hash 5, config 4, upload 7, hedera 6, engine/6-states 7, demo 5, frontend-layout 43). `verify:samples` → 7/7 correct verdicts. `typecheck`, `lint`, `next build` all clean (`/` 186 kB, `/how-it-works` 185 kB First Load JS).
+- `npm test` → **86/86 pass** (hash 5, config 4, upload 7, hedera 6, engine/6-states 7, demo 5, frontend-layout 52). `verify:samples` → 7/7 correct verdicts. `typecheck`, `lint`, `next build` all clean (`/` 186 kB, `/how-it-works` 185 kB First Load JS).
 - Note: `verify:samples` and the DB-backed unit tests use PGlite (single-writer). The unit suite isolates its dirs even with `next dev` running; `verify:samples` still needs the dev server stopped or an isolated `PGLITE_DATA_DIR` (see `TESTING.md`).
 
 ## Known issues

@@ -260,7 +260,24 @@ them in a desktop browser, then repeat the mobile ones with devtools device emul
       and **View on HashScan is on its own full-width row**. No horizontal status strip / no side-scroll.
 - [ ] On desktop the status bar returns to a single sticky bottom row.
 
-### C10. Global responsive sweep
+### C10. Create Tamper Demo (mobile — `/how-it-works#tamper-demo`, needs `TAMPER_DEMO_ENABLED=true`)
+
+Walk the whole flow at **320 / 360 / 390 / 425 / 430 / 768 px**:
+
+- [ ] The **step rail** fits (a 2-column grid on mobile with wrapping labels) — no horizontal scroll.
+- [ ] Every step card is one-per-row, full-width, with content contained (no right-side clipping).
+- [ ] After anchoring, **Demo ID** and **Original Hash** wrap (`break-all`) and stay inside the card;
+      copy buttons stay visible; **Open on HashScan** fits; the Synthetic/Demo/Testnet/Demo-Issuer
+      chips wrap.
+- [ ] The **Anchor Proof progress list** (Validating → … → Complete) wraps and never overflows.
+- [ ] The **modify-file numbered instructions** wrap fully (nothing truncated).
+- [ ] CTA buttons ("Anchor proof", "Continue to tamper test", "Continue with modified copy", "Verify
+      tampering", "Start another demo") show their **full labels** (wrapping to two lines if needed).
+- [ ] The **modified-file upload** box + Verify button are full-width; the final VALID/TAMPERED result
+      and the **hash diff** stay inside the viewport (byte chips wrap).
+- [ ] The page scrolls freely (no sticky/fixed step card); existing register→verify behavior works.
+
+### C11. Global responsive sweep
 
 Check **no horizontal scrollbar / no clipped card / no overlapping badge or title** at each width:
 

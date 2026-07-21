@@ -13,6 +13,7 @@ export function CopyHash({
   value,
   display,
   full = false,
+  wrap = false,
   className,
   label,
 }: {
@@ -20,6 +21,12 @@ export function CopyHash({
   /** Optional pre-shortened display text; otherwise shortHash() (unless full). */
   display?: string;
   full?: boolean;
+  /**
+   * When true, the (full) value WRAPS via `break-all` instead of truncating —
+   * so a long Demo ID / SHA-256 stays fully visible and never forces the chip
+   * (or its card) wider than the parent. Used by the Tamper Demo id/hash fields.
+   */
+  wrap?: boolean;
   className?: string;
   label?: string;
 }) {
@@ -43,15 +50,16 @@ export function CopyHash({
       title={value}
       aria-label={`Copy ${label ?? "value"}: ${value}`}
       className={cn(
-        "group inline-flex items-center gap-2 rounded-lg border border-border bg-[color:rgba(5,9,18,0.6)] px-2.5 py-1.5 font-mono text-[0.8rem] text-brand-ink transition-colors hover:border-brand/50 hover:bg-[color:rgba(0,180,255,0.06)]",
+        "group inline-flex max-w-full items-center gap-2 rounded-lg border border-border bg-[color:rgba(5,9,18,0.6)] px-2.5 py-1.5 font-mono text-[0.8rem] text-brand-ink transition-colors hover:border-brand/50 hover:bg-[color:rgba(0,180,255,0.06)]",
+        wrap && "items-start text-left",
         className,
       )}
     >
-      <span className="truncate">{shown}</span>
+      <span className={cn("min-w-0", wrap ? "break-all" : "truncate")}>{shown}</span>
       {copied ? (
-        <Check className="h-3.5 w-3.5 shrink-0 text-ok" />
+        <Check className={cn("h-3.5 w-3.5 shrink-0 text-ok", wrap && "mt-0.5")} />
       ) : (
-        <Copy className="h-3.5 w-3.5 shrink-0 text-ink-faint transition-colors group-hover:text-brand-2" />
+        <Copy className={cn("h-3.5 w-3.5 shrink-0 text-ink-faint transition-colors group-hover:text-brand-2", wrap && "mt-0.5")} />
       )}
     </button>
   );

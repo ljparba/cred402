@@ -506,3 +506,33 @@ restore the desktop pill). **NetworkStatusBar** was a single `sticky` row with a
 `break-all`; the network badge leads and **View on HashScan gets its own full-width row** on mobile
 (`w-full … lg:w-auto lg:ml-auto`). Every item is `min-w-0`; no body scroll-lock; keyboard/focus and
 reduced-motion preserved.
+
+### 10.9 Create Tamper Demo mobile full-width
+Root cause: the step containers used `grid gap-6 lg:grid-cols-2` — on mobile that is a single
+**`auto`-sized** implicit grid column that grows to its widest child. With the Demo ID / Original Hash
+rendered in a **truncating** `CopyHash` (whose value never wrapped) and CTA buttons carrying the
+`Button` base `whitespace-nowrap`, long ids/hashes and long labels ("I've modified my copy — continue")
+forced the card — and the page — wider than a 320px viewport. Fixes, applied step-by-step from upload
+through result:
+- Step grids are explicit `grid w-full min-w-0 max-w-full grid-cols-1 gap-6 lg:grid-cols-2`; every
+  step card is `w-full min-w-0 max-w-full overflow-hidden`; the flow root + disclaimer are shrink-safe.
+- **Step rail** rebuilt from a flex-wrap chip row (labels hidden below `sm`) into a shrink-safe
+  `grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6` with `min-w-0` chips and **visible, wrapping**
+  labels; `aria-current="step"` preserves progress semantics.
+- **`CopyHash` gained a `wrap` mode** (fixed once, shared): when set, the full value renders
+  `min-w-0 break-all` (no `truncate`) with the copy icon `shrink-0`. The Tamper Demo Demo ID / hash
+  fields (`IdRow`) use `full wrap`, so a 64-char hash wraps and stays fully visible inside the card.
+- **`AnchorProgress`** rows are `flex min-w-0 items-start gap-3`, icon `shrink-0`, text
+  `min-w-0 break-words` (Validating file → Computing SHA-256 → … → Complete).
+- Numbered **modify-file instructions** use `flex min-w-0 items-start gap-3` with `shrink-0` number
+  circles and `min-w-0 break-words` text; the info note is `w-full min-w-0 max-w-full break-words`.
+- **Label chips** (Synthetic / Demo / Hedera Testnet / Cred402 Demo Issuer) use `flex-wrap`; the
+  HashScan link is `min-w-0 break-words` with a `shrink-0` icon.
+- **CTA buttons** are `w-full min-w-0 max-w-full whitespace-normal text-center` (labels may wrap to two
+  lines, icons `shrink-0`); the longest label was shortened to "Continue with modified copy". The
+  final-result actions are `w-full sm:w-auto`.
+- **`HashDiff`** (TAMPERED result) is `w-full min-w-0 max-w-full overflow-hidden` and its byte rows are
+  `flex min-w-0 flex-wrap` so the diff never forces a single-line width.
+No fixed-pixel/`min-w-[…]` widths remain in the Tamper Demo tree (only the page container
+`max-w-[1440px]`); no `position: fixed` / `100vh` / `h-screen` / sticky / body-lock; reduced-motion,
+keyboard, and focus states preserved. All registration/anchoring/verification behavior is unchanged.

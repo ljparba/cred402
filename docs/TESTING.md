@@ -16,7 +16,7 @@ suite with the `test` script:
 npm test
 ```
 
-This runs all **77 tests** across the seven files below (the script lists the files explicitly so it
+This runs all **86 tests** across the seven files below (the script lists the files explicitly so it
 works identically on Windows, macOS, and Linux — a bare `tests/*.test.ts` glob is not expanded by
 Node's `--test` on every shell).
 
@@ -41,7 +41,7 @@ PGLITE_DATA_DIR=./.pglite-test node --import tsx --test tests/engine.test.ts
 **Prerequisite for the engine test:** the sample PDFs must exist and the catalogue hashes must be
 generated, because it hashes the real files. Run `npm run certs:generate` first if you haven't.
 
-> **77 tests currently pass** across the seven files below.
+> **86 tests currently pass** across the seven files below.
 
 ---
 
@@ -55,7 +55,7 @@ generated, because it hashes the real files. Run `npm run certs:generate` first 
 | `tests/hedera.test.ts` | **HCS helpers** — `toDashedTxId` (`@`-form → dashed, preserving account-id dots; idempotent; accepts a `TransactionId`-like object — a real bug was caught here); HashScan URL formats; HCS envelope builders (`buildIssuedEvent` omits `expiresAt` when absent; `buildRevokedEvent` chains to the issuance event). |
 | `tests/config.test.ts` | **Price formatting** — `tinybarsToHbar`: `10000000` → `0.1`; whole HBAR has no fraction; trailing zeros trimmed; zero. |
 | `tests/demo.test.ts` | **Create Tamper Demo** (DB-backed, offline) — synthetic registration under the forced demo issuer, the original→VALID / modified+id→TAMPERED / modified-no-id→UNKNOWN / unknown-id→UNKNOWN matrix, label sanitisation, and the DB-backed rate limiter. |
-| `tests/frontend-layout.test.ts` | **Layout & navigation guards** (structural, 43 checks) — header logo `/` route link with `onLogoClick`; hero Live Activity; homepage 35/65 row + Tamper Demo; sample grid 1/2/3-col + badge-above-title + full button; compact laptop header; upload sidebar order + no “View All”; report Reference-Samples removal; the **scan-state width-overflow fix** (1-col default, 3-col only at xl, shrink-safe wrappers/cards/preview, shrink-safe `grid-cols-4` stepper, no fixed/min widths, log scrolls its own container); and the **payment + footer mobile fix** (payment 1-col grid, shrink-safe `grid-cols-4` payment stepper, shrink-safe `grid-cols-3` wallet/API/Hedera diagram, full-width buttons, stacked transaction-preview rows with `break-all`; footer stacks with a 2-col nav + wrap-safe disclaimer; the bottom status bar is **non-sticky on mobile, sticky only at `lg`**, items wrap with `break-all`, HashScan on its own row). No DOM runner — reads component source and asserts stable tokens. |
+| `tests/frontend-layout.test.ts` | **Layout & navigation guards** (structural, 43 checks) — header logo `/` route link with `onLogoClick`; hero Live Activity; homepage 35/65 row + Tamper Demo; sample grid 1/2/3-col + badge-above-title + full button; compact laptop header; upload sidebar order + no “View All”; report Reference-Samples removal; the **scan-state width-overflow fix** (1-col default, 3-col only at xl, shrink-safe wrappers/cards/preview, shrink-safe `grid-cols-4` stepper, no fixed/min widths, log scrolls its own container); and the **payment + footer mobile fix** (payment 1-col grid, shrink-safe `grid-cols-4` payment stepper, shrink-safe `grid-cols-3` wallet/API/Hedera diagram, full-width buttons, stacked transaction-preview rows with `break-all`; footer stacks with a 2-col nav + wrap-safe disclaimer; the bottom status bar is **non-sticky on mobile, sticky only at `lg`**, items wrap with `break-all`, HashScan on its own row); and the **Tamper Demo mobile fix** (step containers default to `grid-cols-1`; shrink-safe `grid-cols-2 → sm:3 → lg:6` step rail; contained step cards; `AnchorProgress` rows `items-start` + `break-words`; Demo ID / hash fields wrap via the `CopyHash wrap` mode instead of truncating; instruction rows + label chips + CTA buttons wrap; `HashDiff` contained; no fixed/`100vh`/sticky trap). No DOM runner — reads component source and asserts stable tokens. |
 
 The engine test seeds an isolated DB in a `before()` hook (migrate → seed) so verdicts are computed
 against the same registry the app uses, with a **fixed clock** (`2026-07-20`) so expired/valid
@@ -142,7 +142,7 @@ npm run db:setup
 npm run certs:generate
 npm run db:seed
 npm run verify:samples
-npm test                                   # 77 tests
+npm test                                   # 86 tests
 npm run lint
 npm run typecheck
 npm run build

@@ -36,6 +36,9 @@ const paymentFlow = read("src/components/viz/PaymentFlow.tsx");
 const footer = read("src/components/layout/Footer.tsx");
 const statusBar = read("src/components/layout/NetworkStatusBar.tsx");
 const copyHash = read("src/components/ui/CopyHash.tsx");
+const tamperDemo = read("src/components/demo/TamperDemo.tsx");
+const anchorProgress = read("src/components/demo/AnchorProgress.tsx");
+const hashDiff = read("src/components/report/HashDiff.tsx");
 
 /** Index of the nth occurrence of a section label, or -1. */
 function labelIndex(src: string, label: string): number {
@@ -379,4 +382,60 @@ test("status items wrap safely; HashScan gets its own full-width mobile row", ()
   assert.match(statusBar, /w-full shrink-0[\s\S]*?lg:w-auto[\s\S]*?View on HashScan/);
   // No internal horizontal scroll strip anymore.
   assert.doesNotMatch(statusBar, /overflow-x-auto/);
+});
+
+// ── Tamper Demo mobile full-width (tamper-demo-mobile prompt §5–§13) ───────────
+
+test("tamper demo has no fixed-pixel/min widths that can overflow mobile", () => {
+  assertNoFixedWidths("TamperDemo", tamperDemo);
+  assertNoFixedWidths("AnchorProgress", anchorProgress);
+});
+
+test("tamper demo step rail is a shrink-safe grid (2 → 3 → 6 cols)", () => {
+  assert.match(tamperDemo, /grid w-full min-w-0 max-w-full grid-cols-2[\s\S]*?sm:grid-cols-3[\s\S]*?lg:grid-cols-6/);
+  // Labels are visible + wrap (no longer hidden behind sm:).
+  assert.doesNotMatch(tamperDemo, /hidden sm:inline">\{label\}/);
+});
+
+test("tamper demo step containers default to one column and cards are contained", () => {
+  // grid-cols-1 (not the default single `auto` column) up to lg — a real overflow source.
+  assert.match(tamperDemo, /grid w-full min-w-0 max-w-full grid-cols-1 gap-6 lg:grid-cols-2/);
+  const contained = tamperDemo.match(/w-full min-w-0 max-w-full overflow-hidden/g) ?? [];
+  assert.ok(contained.length >= 5, `expected several contained cards, got ${contained.length}`);
+});
+
+test("tamper demo Demo ID / hash fields wrap (break-all), never truncate", () => {
+  assert.match(tamperDemo, /<CopyHash value=\{value\} full wrap/);
+  assert.match(copyHash, /wrap \? "break-all" : "truncate"/);
+  assert.match(copyHash, /shrink-0/);
+});
+
+test("tamper demo anchor-progress rows are shrink-safe (items-start + break-words)", () => {
+  assert.match(anchorProgress, /flex min-w-0 max-w-full items-start gap-3/);
+  assert.match(anchorProgress, /min-w-0 break-words text-sm/);
+  assert.match(anchorProgress, /shrink-0/);
+});
+
+test("tamper demo instruction rows + label chips wrap safely", () => {
+  assert.match(tamperDemo, /flex min-w-0 max-w-full items-start gap-3[\s\S]*?min-w-0 break-words">\{t\}/);
+  assert.match(tamperDemo, /flex w-full min-w-0 max-w-full flex-wrap gap-1\.5/); // label chips
+});
+
+test("tamper demo CTA buttons are full-width and allow wrapped text", () => {
+  const wrapped = tamperDemo.match(/w-full min-w-0 max-w-full whitespace-normal text-center/g) ?? [];
+  assert.ok(wrapped.length >= 3, `expected several wrappable CTA buttons, got ${wrapped.length}`);
+  // The over-long label was shortened.
+  assert.doesNotMatch(tamperDemo, /I&apos;ve modified my copy/);
+  assert.match(tamperDemo, /Continue with modified copy/);
+});
+
+test("tamper demo diff view is contained and wraps its byte chips", () => {
+  assert.match(hashDiff, /w-full min-w-0 max-w-full overflow-hidden rounded-xl/);
+  assert.match(hashDiff, /flex min-w-0 flex-wrap gap-1/);
+});
+
+test("tamper demo flow uses no fixed/100vh/body-lock/sticky trap", () => {
+  for (const trap of ["position: fixed", "fixed inset-0", "h-screen", "100vh", "sticky"]) {
+    assert.ok(!tamperDemo.includes(trap), `TamperDemo must not use ${trap}`);
+  }
 });

@@ -39,11 +39,11 @@ export function HashDiff({
 
   function Row({ bytes, label }: { bytes: string[]; label: string }) {
     return (
-      <div className="flex items-center gap-2">
-        <span className="w-16 shrink-0 text-[0.6rem] font-semibold uppercase tracking-wider text-ink-faint">
+      <div className="flex min-w-0 max-w-full items-start gap-2">
+        <span className="w-14 shrink-0 pt-0.5 text-[0.6rem] font-semibold uppercase tracking-wider text-ink-faint sm:w-16">
           {label}
         </span>
-        <div className="flex flex-wrap gap-1 font-mono text-xs">
+        <div className="flex min-w-0 flex-wrap gap-1 font-mono text-xs">
           {bytes.slice(0, window).map((b, i) => {
             const diff = diffFlags[i];
             return (
@@ -70,15 +70,15 @@ export function HashDiff({
   }
 
   return (
-    <div className={cn("rounded-xl border border-[color:rgba(239,68,68,0.35)] bg-[color:rgba(239,68,68,0.04)] p-4", className)}>
+    <div className={cn("w-full min-w-0 max-w-full overflow-hidden rounded-xl border border-[color:rgba(239,68,68,0.35)] bg-[color:rgba(239,68,68,0.04)] p-4", className)}>
       <p className="mb-3 text-[0.7rem] font-semibold uppercase tracking-wider text-danger-soft">Diff View</p>
       <div className="space-y-2">
         <Row bytes={a} label="Anchored" />
         <Row bytes={u} label="Uploaded" />
         {/* caret row marking diffs */}
-        <div className="flex items-center gap-2">
-          <span className="w-16 shrink-0" />
-          <div className="flex flex-wrap gap-1 font-mono text-xs text-danger">
+        <div className="flex min-w-0 max-w-full items-start gap-2">
+          <span className="w-14 shrink-0 sm:w-16" />
+          <div className="flex min-w-0 flex-wrap gap-1 font-mono text-xs text-danger">
             {diffFlags.slice(0, window).map((d, i) => (
               <span key={i} className="w-[1.6rem] text-center">
                 {d ? "^^" : "  "}
