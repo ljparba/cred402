@@ -16,6 +16,7 @@ delete process.env.HEDERA_HCS_TOPIC_ID;
 import { test, before } from "node:test";
 import assert from "node:assert/strict";
 import { getDbBundle } from "@/lib/db";
+import { registerDbTeardown } from "./lib/db-teardown";
 import { registerDemoOriginal, sanitizeLabel, DEMO_ISSUER_ID } from "@/lib/demo/register";
 import { checkAndRecord } from "@/lib/demo/rate-limit";
 import { verify } from "@/lib/verify/engine";
@@ -28,6 +29,9 @@ before(async () => {
   const bundle = await getDbBundle();
   await bundle.migrate();
 });
+
+// Dispose the PGlite handle after the file so the test process exits naturally.
+registerDbTeardown();
 
 test("registration is synthetic, offline-safe, and drives the full verdict matrix", async () => {
   const reg = await registerDemoOriginal(original, "My Diploma");

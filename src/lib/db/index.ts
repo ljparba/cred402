@@ -74,4 +74,30 @@ export async function getDb(): Promise<DB> {
   return (await getDbBundle()).db;
 }
 
+/**
+ * Dispose the cached DB connection so a short-lived process (tests, CLI scripts)
+ * can exit naturally instead of hanging on an open handle. Closes the underlying
+ * PGlite instance (`.close()`) or the postgres.js pool (`.end()`) and clears the
+ * memoised singleton. Idempotent and safe: even if there is no handle, or the
+ * close throws, the singleton is cleared in `finally` so a later `getDbBundle()`
+ * re-initialises cleanly.
+ */
+export async function closeDb(): Promise<void> {
+  const bundle = globalForDb.__cred402Db;
+  if (!bundle) return;
+  try {
+    const raw = bundle.raw as {
+      close?: () => Promise<void>;
+      end?: (opts?: { timeout?: number }) => Promise<void>;
+    } | null;
+    if (raw && typeof raw.close === "function") {
+      await raw.close(); // PGlite (WASM) — releases the data-dir/VFS handle
+    } else if (raw && typeof raw.end === "function") {
+      await raw.end({ timeout: 5 }); // postgres.js — drains the pool
+    }
+  } finally {
+    globalForDb.__cred402Db = undefined;
+  }
+}
+
 export { schema };

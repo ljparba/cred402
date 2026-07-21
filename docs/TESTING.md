@@ -25,8 +25,13 @@ database so they never touch your dev DB. `engine.test.ts` imports `tests/lib/is
 **first** import — that pins `PGLITE_DATA_DIR` to `./.pglite-test` *before* `scripts/seed` →
 `scripts/lib/env` can load `.env` (which would otherwise set it to the dev dir `./.pglite`). Without
 that ordering, a running `next dev` — which holds the single-writer `./.pglite` open — would make the
-suite abort inside PGlite. `demo.test.ts` isolates to `./.pglite-demotest` the same way. To run the
-engine test alone:
+suite abort inside PGlite. `demo.test.ts` isolates to `./.pglite-demotest` the same way.
+
+Both DB-backed files call `registerDbTeardown()` (`tests/lib/db-teardown.ts`), which registers an
+`after()` hook that disposes the cached PGlite instance via `closeDb()` (`src/lib/db/index.ts`). PGlite
+keeps an open handle while alive, so without this the `node --test` process would print its summary
+but never exit; the teardown releases the handle so each file (and `npm test`) **exits naturally** —
+no forced `process.exit`. To run the engine test alone:
 
 ```bash
 node --import tsx --test tests/engine.test.ts

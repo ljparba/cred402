@@ -15,6 +15,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { getDbBundle } from "@/lib/db";
+import { registerDbTeardown } from "./lib/db-teardown";
 import { seed } from "../scripts/seed";
 import { sha256 } from "@/lib/verify/hash";
 import { extractCredentialId } from "@/lib/verify/extract";
@@ -34,6 +35,9 @@ before(async () => {
   await bundle.migrate();
   await seed();
 });
+
+// Dispose the PGlite handle after the file so the test process exits naturally.
+registerDbTeardown();
 
 for (const s of samples) {
   test(`${s.slug} → ${s.expectedVerdict}`, async () => {
