@@ -49,9 +49,8 @@ export function LiveActivity({
       </h2>
 
       <div
-        className="mt-4 flex-1 space-y-1 overflow-y-auto scroll-thin pr-1"
+        className="mt-4 min-h-0 max-h-[30rem] flex-1 space-y-1 overflow-y-auto scroll-thin pr-1"
         aria-live="polite"
-        style={{ maxHeight: 360 }}
       >
         {loading ? (
           Array.from({ length: 5 }).map((_, i) => <div key={i} className="skeleton h-14 rounded-lg" />)
@@ -76,16 +75,18 @@ export function LiveActivity({
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium text-ink">{item.title}</p>
-                    <p className="truncate font-mono text-[0.7rem] text-ink-dim">{item.subtitle}</p>
+                    <p className="break-all font-mono text-[0.7rem] leading-snug text-ink-dim">
+                      {item.subtitle}
+                    </p>
                   </div>
-                  <div className="flex shrink-0 flex-col items-end gap-0.5">
+                  <div className="flex shrink-0 flex-col items-end gap-1">
                     <span className="text-[0.7rem] text-ink-faint">{timeAgo(item.at, now)}</span>
                     {item.hashscanUrl && (
                       <a
                         href={item.hashscanUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-0.5 text-[0.7rem] text-brand-2 hover:underline"
+                        className="inline-flex items-center gap-0.5 py-0.5 text-[0.7rem] text-brand-2 hover:underline"
                       >
                         HashScan <ExternalLink className="h-3 w-3" />
                       </a>

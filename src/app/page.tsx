@@ -24,9 +24,9 @@ import { ModeBanner } from "@/components/layout/ModeBanner";
 import { NetworkStatusBar } from "@/components/layout/NetworkStatusBar";
 import { Hero } from "@/components/sections/Hero";
 import { StatCounters } from "@/components/sections/StatCounters";
-import { HowItWorks } from "@/components/sections/HowItWorks";
+import { HowItWorksPreview } from "@/components/sections/HowItWorksPreview";
 import { Samples } from "@/components/sections/Samples";
-import { LiveActivity } from "@/components/sections/LiveActivity";
+import { TamperDemoTeaser } from "@/components/sections/TamperDemoTeaser";
 import { UploadScan, type ScanPhase } from "@/components/flow/UploadScan";
 import { Payment402, type PayPhase } from "@/components/flow/Payment402";
 import { VerificationEngine } from "@/components/flow/VerificationEngine";
@@ -103,6 +103,18 @@ export default function Home() {
     setChallenge(null);
     setReport(null);
   }, []);
+
+  /**
+   * Return to the landing view. The header logo is a real `<Link href="/">`, but
+   * on the homepage that link is a no-op (already at `/`), so we also reset the
+   * client-side flow state and scroll to the top — the logo therefore always
+   * "goes home" from any in-page flow stage too.
+   */
+  const goHome = useCallback(() => {
+    resetFlow();
+    setStage("landing");
+    window.scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" });
+  }, [resetFlow, reduce]);
 
   // ── Actions ──────────────────────────────────────────────────────────────────
 
@@ -230,6 +242,22 @@ export default function Home() {
     scrollToFlow();
   }, [scrollToFlow]);
 
+  // Deep link: `/?verify=1` (e.g. the shared nav's "Verify a Certificate" from
+  // another route) jumps straight to the scan stage, then cleans the URL.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("verify") === "1") {
+      setStage("scan");
+      requestAnimationFrame(() =>
+        flowRef.current?.scrollIntoView({ behavior: "auto", block: "start" }),
+      );
+      params.delete("verify");
+      const qs = params.toString();
+      window.history.replaceState(null, "", qs ? `/?${qs}` : "/");
+    }
+    // Run once on mount.
+  }, []);
+
   const verifyAnother = useCallback(() => {
     resetFlow();
     setStage("scan");
@@ -245,28 +273,51 @@ export default function Home() {
   return (
     <div id="top" className="flex min-h-screen flex-col">
       <ModeBanner health={health} />
-      <Nav onVerifyClick={goToScan} />
+      <Nav onVerifyClick={goToScan} onLogoClick={goHome} />
 
       <main className="flex-1 pb-10">
         {/* Landing */}
         {showLanding && (
           <>
-            <Hero onVerify={goToScan} onSamples={goToSamples} />
+            <Hero
+              onVerify={goToScan}
+              onSamples={goToSamples}
+              activity={activity?.items ?? []}
+              activityLoading={!activity}
+              now={now}
+            />
 
             <div className="mx-auto mt-10 max-w-[1440px] px-4 sm:px-6 lg:px-8">
               <StatCounters stats={activity?.stats ?? null} />
             </div>
 
-            <div className="mx-auto mt-8 grid max-w-[1440px] gap-6 px-4 sm:px-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_minmax(0,1fr)] lg:px-8">
-              <HowItWorks />
+            {/* Row — How-It-Works preview (35%, left) + Sample Certificates (65%, right). */}
+            <div className="mx-auto mt-8 grid max-w-[1440px] gap-6 px-4 sm:px-6 lg:grid-cols-[minmax(0,35fr)_minmax(0,65fr)] lg:px-8">
+              <HowItWorksPreview />
               <Samples samples={samples} loading={samplesLoading} onUseSample={handleUseSample} />
-              <LiveActivity items={activity?.items ?? []} loading={!activity} now={now} />
+            </div>
+
+            {/* Original vs. Tampered — Create Tamper Demo (full-width band). */}
+            <div className="mx-auto mt-8 max-w-[1440px] px-4 sm:px-6 lg:px-8">
+              <TamperDemoTeaser />
             </div>
           </>
         )}
 
         {/* Interactive flow */}
         <div ref={flowRef}>
+          {/* Back to home — kept near the TOP of every flow stage, not only at the
+              bottom of a long page (final refinement prompt §7). */}
+          {!showLanding && (
+            <div className="mx-auto max-w-[1440px] px-4 pt-6 sm:px-6 lg:px-8">
+              <button
+                onClick={goHome}
+                className="inline-flex items-center gap-1.5 text-sm text-ink-dim underline-offset-4 transition-colors hover:text-ink hover:underline"
+              >
+                ← Back to home
+              </button>
+            </div>
+          )}
           <AnimatePresence mode="wait">
             {stage === "scan" && (
               <motion.div
@@ -332,34 +383,12 @@ export default function Home() {
                 exit={{ opacity: 0, y: -16 }}
                 transition={{ duration: 0.4 }}
               >
-                <Report
-                  report={report}
-                  preview={preview}
-                  samples={samples}
-                  onVerifyAnother={verifyAnother}
-                  onUseSample={handleUseSample}
-                />
+                <Report report={report} preview={preview} onVerifyAnother={verifyAnother} />
               </motion.div>
             )}
           </AnimatePresence>
         </div>
 
-        {/* Samples + activity always reachable from the flow via anchors on landing;
-            when in-flow, provide a lightweight return control. */}
-        {!showLanding && (
-          <div className="mx-auto mt-10 max-w-[1440px] px-4 sm:px-6 lg:px-8">
-            <button
-              onClick={() => {
-                resetFlow();
-                setStage("landing");
-                window.scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" });
-              }}
-              className="text-sm text-ink-dim underline-offset-4 transition-colors hover:text-ink hover:underline"
-            >
-              ← Back to home
-            </button>
-          </div>
-        )}
       </main>
 
       <Footer />

@@ -34,9 +34,8 @@ yarn-error.log*
 .env*
 !.env.example
 
-# local embedded postgres (PGlite) data
-/.pglite/
-/.pglite-test/
+# local embedded postgres (PGlite) data (incl. isolated per-test databases)
+/.pglite*/
 
 # vercel
 .vercel

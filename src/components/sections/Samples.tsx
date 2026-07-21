@@ -65,9 +65,9 @@ export function Samples({
       </h2>
 
       {loading ? (
-        <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="skeleton h-52 rounded-xl" />
+        <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="skeleton h-56 rounded-xl" />
           ))}
         </div>
       ) : samples.length === 0 ? (
@@ -76,7 +76,7 @@ export function Samples({
           <p className="text-sm">No samples available — run the seed script.</p>
         </div>
       ) : (
-        <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
           {samples.map((s, i) => {
             const style = CATEGORY_STYLE[s.category] ?? CATEGORY_STYLE.fake;
             return (
@@ -86,14 +86,11 @@ export function Samples({
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-30px" }}
                 transition={{ duration: 0.45, delay: Math.min(i, 6) * 0.05 }}
-                className="flex flex-col gap-3 rounded-xl border border-border bg-[color:rgba(8,14,28,0.6)] p-3 transition-colors hover:border-brand/40"
+                className="flex flex-col gap-3 rounded-xl border border-border bg-[color:rgba(8,14,28,0.6)] p-3.5 transition-colors hover:border-brand/40"
               >
                 <MiniCert tone={style.dot} />
                 <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <h3 className="truncate text-sm font-semibold text-ink">{s.label}</h3>
-                    <p className="mt-0.5 line-clamp-2 text-xs text-ink-dim">{s.description}</p>
-                  </div>
+                  <h3 className="min-w-0 text-sm font-semibold leading-snug text-ink">{s.label}</h3>
                   <span
                     className={cn(
                       "shrink-0 rounded-md border px-2 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wider",
@@ -103,9 +100,11 @@ export function Samples({
                     {s.category}
                   </span>
                 </div>
-                <div className="mt-auto flex items-center gap-2">
-                  <Button size="sm" className="flex-1" onClick={() => onUseSample(s)}>
-                    Use this sample <ArrowRight className="h-3.5 w-3.5" />
+                <p className="line-clamp-2 text-xs leading-relaxed text-ink-dim">{s.description}</p>
+                <div className="mt-auto flex items-center gap-2 pt-1">
+                  <Button size="sm" className="min-w-0 flex-1" onClick={() => onUseSample(s)}>
+                    <span className="truncate">Use this sample</span>
+                    <ArrowRight className="h-3.5 w-3.5 shrink-0" />
                   </Button>
                   <a
                     href={s.downloadUrl}

@@ -25,6 +25,8 @@ import { relations } from "drizzle-orm";
 
 // ── Shared value unions ──────────────────────────────────────────────────────
 export type CredentialStatus = "ACTIVE" | "REVOKED" | "EXPIRED";
+/** How a credential entered the registry: seeded catalogue vs Create-Tamper-Demo. */
+export type CredentialSource = "seed" | "demo";
 export type EventType = "CREDENTIAL_ISSUED" | "CREDENTIAL_REVOKED" | "ISSUER_REGISTERED";
 export type RequestStatus = "AWAITING_PAYMENT" | "PAID" | "COMPLETED" | "FAILED";
 export type SettlementStatus = "SETTLED" | "FAILED";
@@ -81,6 +83,8 @@ export const credentials = pgTable(
     /** SHA-256 (64 hex) of the originally issued file — the anchored expected hash. */
     sha256: text("sha256").notNull(),
     revokedAt: timestamp("revoked_at", { withTimezone: true, mode: "date" }),
+    /** Seeded catalogue credential vs one created by the Create Tamper Demo feature. */
+    source: text("source").$type<CredentialSource>().notNull().default("seed"),
     createdAt: now(),
   },
   (t) => [
@@ -233,6 +237,18 @@ export const demoSamples = pgTable("demo_samples", {
   createdAt: now(),
 });
 
+// ── rate_limit_hits (DB-backed limiter — portable, multi-instance-safe) ──────
+export const rateLimitHits = pgTable(
+  "rate_limit_hits",
+  {
+    id: text("id").primaryKey(),
+    /** Bucket key, e.g. "demo_register:<sha256(ip)>". */
+    key: text("key").notNull(),
+    at: timestamp("at", { withTimezone: true, mode: "date" }).defaultNow().notNull(),
+  },
+  (t) => [index("rate_limit_hits_key_at_idx").on(t.key, t.at)],
+);
+
 // ── relations ────────────────────────────────────────────────────────────────
 export const issuersRelations = relations(issuers, ({ many }) => ({
   credentials: many(credentials),
@@ -305,3 +321,4 @@ export type VerificationResult = typeof verificationResults.$inferSelect;
 export type PaymentRequest = typeof paymentRequests.$inferSelect;
 export type PaymentSettlement = typeof paymentSettlements.$inferSelect;
 export type DemoSample = typeof demoSamples.$inferSelect;
+export type RateLimitHit = typeof rateLimitHits.$inferSelect;

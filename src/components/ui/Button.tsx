@@ -5,6 +5,7 @@
  */
 "use client";
 
+import Link from "next/link";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 import type { ButtonHTMLAttributes, ReactNode } from "react";
@@ -36,11 +37,35 @@ export interface ButtonProps
   extends ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof button> {
   children: ReactNode;
+  /**
+   * When set, the button renders as a Next.js `Link` (internal, incl. hash) or a
+   * plain `<a>` (external `http(s)`), keeping the exact button styling. Lets
+   * navigation CTAs reuse the same visual treatment as action buttons.
+   */
+  href?: string;
 }
 
-export function Button({ className, variant, size, children, ...props }: ButtonProps) {
+export function Button({ className, variant, size, children, href, ...props }: ButtonProps) {
+  const classes = cn(button({ variant, size }), className);
+
+  if (href) {
+    const external = /^https?:\/\//.test(href);
+    if (external) {
+      return (
+        <a href={href} target="_blank" rel="noopener noreferrer" className={classes}>
+          {children}
+        </a>
+      );
+    }
+    return (
+      <Link href={href} className={classes}>
+        {children}
+      </Link>
+    );
+  }
+
   return (
-    <button className={cn(button({ variant, size }), className)} {...props}>
+    <button className={classes} {...props}>
       {children}
     </button>
   );

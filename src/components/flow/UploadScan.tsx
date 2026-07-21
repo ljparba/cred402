@@ -183,17 +183,17 @@ export function UploadScan({
           </div>
         </div>
 
-        {/* ── Right: samples + hints + scan process ──────────────────────── */}
+        {/* ── Right: sample files → scan process → issuer hints ──────────── */}
         <div className="flex flex-col gap-5">
-          <GlassPanel className="p-5">
-            <div className="flex items-center justify-between">
+          {/* Sample Files — ALL samples in a controlled vertical scroll; no
+              browse-all link, every sample is selectable directly. */}
+          <GlassPanel className="flex min-h-0 flex-col p-5">
+            <div className="flex items-center justify-between gap-2">
               <SectionLabel>Sample Files</SectionLabel>
-              <a href="#samples" className="text-xs text-brand-2 hover:underline">
-                View All
-              </a>
+              <span className="shrink-0 text-xs text-ink-faint">{samples.length} files</span>
             </div>
-            <ul className="mt-4 space-y-2">
-              {samples.slice(0, 3).map((s) => (
+            <ul className="mt-4 max-h-80 space-y-2 overflow-y-auto scroll-thin pr-1">
+              {samples.map((s) => (
                 <li key={s.slug}>
                   <button
                     onClick={() => onUseSample(s)}
@@ -215,18 +215,7 @@ export function UploadScan({
             </ul>
           </GlassPanel>
 
-          <GlassPanel className="p-5">
-            <SectionLabel>Issuer Hints</SectionLabel>
-            <p className="mt-3 text-xs text-ink-dim">For best results, certificates should include:</p>
-            <ul className="mt-3 space-y-2 text-sm text-ink">
-              {["Issuer name or organization", "Recipient's name", "Issue date", "Unique certificate ID"].map((h) => (
-                <li key={h} className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 shrink-0 text-brand-2" /> {h}
-                </li>
-              ))}
-            </ul>
-          </GlassPanel>
-
+          {/* Scan Process — moved ABOVE Issuer Hints (final refinement prompt §8). */}
           <GlassPanel className="p-5">
             <SectionLabel>Scan Process</SectionLabel>
             <ol className="mt-4 space-y-3">
@@ -258,6 +247,18 @@ export function UploadScan({
                 );
               })}
             </ol>
+          </GlassPanel>
+
+          <GlassPanel className="p-5">
+            <SectionLabel>Issuer Hints</SectionLabel>
+            <p className="mt-3 text-xs text-ink-dim">For best results, certificates should include:</p>
+            <ul className="mt-3 space-y-2 text-sm text-ink">
+              {["Issuer name or organization", "Recipient's name", "Issue date", "Unique certificate ID"].map((h) => (
+                <li key={h} className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 shrink-0 text-brand-2" /> {h}
+                </li>
+              ))}
+            </ul>
           </GlassPanel>
         </div>
       </div>

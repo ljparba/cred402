@@ -49,6 +49,12 @@ export async function GET() {
         demoPayerConfigured: Boolean(serverConfig.demoPayerId && serverConfig.demoPayerKey),
       },
       upload: { maxBytes: serverConfig.maxUploadSize },
+      tamperDemo: {
+        enabled: serverConfig.tamperDemoEnabled,
+        testnet: serverConfig.isTestnet,
+        rateLimitMax: serverConfig.tamperDemoRateLimitMax,
+        rateLimitWindowSeconds: serverConfig.tamperDemoRateLimitWindowSeconds,
+      },
     });
   });
 }

@@ -117,17 +117,21 @@ Cred402 is a **single interactive page** — an "interactive verification machin
 site. It walks the whole product journey in one flow with meaningful animations for each waiting
 state:
 
-1. Animated hero + headline stats (from `/api/activity`)
-2. Credential upload workspace (drag-and-drop; PDF/PNG/JPEG)
-3. Scanning + SHA-256 hashing visualization
-4. HTTP 402 payment-required gate
-5. x402 payment settlement (real transfer, or simulated in demo mode)
-6. HCS proof lookup
-7. Per-check verification progress (the six checks, individually)
-8. Final report — VALID seal, TAMPERED hash-diff, REVOKED timeline, etc.
-9. Downloadable sample certificates
-10. "How it works"
-11. Live Hedera activity feed
+1. Animated hero — headline + CTAs, the certificate scanner, and the **live Hedera activity feed**
+   in the right column (from `/api/activity`)
+2. Headline stats, then **How It Works preview (35%) beside Sample Certificates (65%)**
+3. **Original vs. Tampered — Create Tamper Demo** homepage section (links to the full demo)
+4. Credential upload workspace (drag-and-drop; PDF/PNG/JPEG) with a Sample Files → Scan Process →
+   Issuer Hints sidebar
+5. Scanning + SHA-256 hashing visualization
+6. HTTP 402 payment-required gate
+7. x402 payment settlement (real transfer, or simulated in demo mode)
+8. HCS proof lookup
+9. Per-check verification progress (the six checks, individually)
+10. Final report — Credential · Verdict · Payment Proof over Verification Checks + HCS/Activity
+   (VALID seal, TAMPERED hash-diff, REVOKED timeline, etc.)
+11. A dedicated **`/how-it-works`** route (8-step flow, six checks/verdicts, interactive Create
+   Tamper Demo)
 12. Minimal footer with GitHub link + testnet disclaimer
 
 The frontend honours `prefers-reduced-motion` and is responsive down to mobile. (This README

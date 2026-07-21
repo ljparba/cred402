@@ -1,7 +1,13 @@
 /**
- * Hero (mockup 1). Headline + tagline + primary CTAs on the left; the animated
- * certificate scanner in the centre with a live SHA-256 status strip; the HCS
- * network visualization + proof feature cards on the right.
+ * Hero (mockup 1). Headline + tagline + primary CTAs and the three feature cards
+ * on the left; the animated certificate scanner in the centre with a live
+ * SHA-256 status strip; and the live activity feed on the right.
+ *
+ * The right column used to repeat the HCS/x402/tamper "proof cards" already shown
+ * elsewhere on the page — that redundant panel is replaced by the real
+ * {@link LiveActivity} feed so the hero shows something live and non-duplicative.
+ * On mobile the three areas stack into one full-width row each (headline →
+ * scanner → live activity) rather than being squeezed into a narrow column.
  */
 "use client";
 
@@ -10,8 +16,8 @@ import { ArrowRight, FileText, Boxes, DollarSign, ShieldCheck, CheckCircle2 } fr
 import type { LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { CertScanner } from "@/components/viz/CertScanner";
-import { HederaNetworkViz } from "@/components/viz/HederaNetworkViz";
-import { HexBadge } from "@/components/brand/HexBadge";
+import { LiveActivity } from "@/components/sections/LiveActivity";
+import type { ActivityItem } from "@/components/lib/api";
 
 const FEATURES: { icon: LucideIcon; title: string; sub: string }[] = [
   { icon: Boxes, title: "HCS Proof", sub: "On-chain issuance evidence" },
@@ -19,22 +25,28 @@ const FEATURES: { icon: LucideIcon; title: string; sub: string }[] = [
   { icon: ShieldCheck, title: "Tamper Detection", sub: "Byte-level hash integrity" },
 ];
 
-const PROOF_CARDS = [
-  { title: "HCS Proof", status: "Anchored", detail: "Hedera Consensus Service" },
-  { title: "x402 Payment", status: "Settled", detail: "Independent Mirror proof" },
-  { title: "Tamper Detection", status: "Deterministic", detail: "SHA-256 comparison" },
-];
-
-export function Hero({ onVerify, onSamples }: { onVerify: () => void; onSamples: () => void }) {
+export function Hero({
+  onVerify,
+  onSamples,
+  activity,
+  activityLoading,
+  now,
+}: {
+  onVerify: () => void;
+  onSamples: () => void;
+  activity: ActivityItem[];
+  activityLoading: boolean;
+  now: number;
+}) {
   return (
     <section className="relative mx-auto max-w-[1440px] px-4 pt-10 sm:px-6 lg:px-8 lg:pt-14">
-      <div className="grid items-center gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)_minmax(0,0.9fr)]">
+      <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)_minmax(0,0.9fr)] lg:items-stretch">
         {/* ── Left: headline ─────────────────────────────────────────────── */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="max-w-xl"
+          className="flex min-w-0 max-w-xl flex-col justify-center"
         >
           <div className="mb-4 inline-flex items-center gap-2 text-[0.7rem] font-semibold uppercase tracking-[0.2em] text-brand-2">
             <ShieldCheck className="h-4 w-4" />
@@ -58,16 +70,18 @@ export function Hero({ onVerify, onSamples }: { onVerify: () => void; onSamples:
             </Button>
           </div>
 
-          {/* feature chips */}
-          <div className="mt-8 grid grid-cols-3 gap-3">
+          {/* feature chips — one per row on mobile, 3-up from sm */}
+          <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-3">
             {FEATURES.map((f) => (
               <div
                 key={f.title}
-                className="rounded-xl border border-border bg-[color:rgba(8,14,28,0.6)] p-3"
+                className="flex items-center gap-3 rounded-xl border border-border bg-[color:rgba(8,14,28,0.6)] p-3 sm:flex-col sm:items-start sm:gap-0"
               >
-                <f.icon className="h-5 w-5 text-brand-2" />
-                <div className="mt-2 text-[0.8rem] font-semibold text-ink">{f.title}</div>
-                <div className="text-[0.68rem] text-ink-faint">{f.sub}</div>
+                <f.icon className="h-5 w-5 shrink-0 text-brand-2 sm:mb-2" />
+                <div className="min-w-0">
+                  <div className="text-[0.8rem] font-semibold text-ink">{f.title}</div>
+                  <div className="text-[0.68rem] text-ink-faint">{f.sub}</div>
+                </div>
               </div>
             ))}
           </div>
@@ -78,6 +92,7 @@ export function Hero({ onVerify, onSamples }: { onVerify: () => void; onSamples:
           initial={{ opacity: 0, scale: 0.96 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.6, delay: 0.15 }}
+          className="flex min-w-0 flex-col justify-center"
         >
           <CertScanner
             label="Scanning Certificate"
@@ -88,10 +103,10 @@ export function Hero({ onVerify, onSamples }: { onVerify: () => void; onSamples:
                     SHA-256 Hash
                   </span>
                 </div>
-                <p className="mt-1 font-mono text-sm text-brand-ink">
+                <p className="mt-1 break-all font-mono text-sm text-brand-ink">
                   4f9c28e3b0a7…7c9d6f2a91e3
                 </p>
-                <div className="mt-3 flex items-center gap-2 border-t border-border pt-3">
+                <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-border pt-3">
                   <span className="text-[0.65rem] font-semibold uppercase tracking-wider text-ink-faint">
                     Status
                   </span>
@@ -105,36 +120,19 @@ export function Hero({ onVerify, onSamples }: { onVerify: () => void; onSamples:
           />
         </motion.div>
 
-        {/* ── Right: network + proof cards ───────────────────────────────── */}
+        {/* ── Right: live activity (replaces the redundant proof panel) ───── */}
         <motion.div
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.6, delay: 0.25 }}
-          className="hidden lg:block"
+          className="flex min-w-0"
         >
-          <div className="mb-3 flex items-center gap-3">
-            <HexBadge size={34} />
-            <div>
-              <div className="text-sm font-semibold text-ink">Hedera Consensus Service</div>
-              <div className="text-[0.7rem] text-ink-faint">Decentralized · Immutable · Verifiable</div>
-            </div>
-          </div>
-          <HederaNetworkViz className="h-40 w-full" />
-          <div className="mt-3 space-y-2.5">
-            {PROOF_CARDS.map((c) => (
-              <div
-                key={c.title}
-                className="flex items-center gap-3 rounded-xl border border-border bg-[color:rgba(8,14,28,0.6)] px-3.5 py-2.5"
-              >
-                <CheckCircle2 className="h-5 w-5 shrink-0 text-ok" />
-                <div className="min-w-0">
-                  <div className="text-sm font-semibold text-ink">{c.title}</div>
-                  <div className="truncate text-[0.7rem] text-ink-faint">{c.detail}</div>
-                </div>
-                <span className="ml-auto shrink-0 text-xs font-medium text-ok">{c.status}</span>
-              </div>
-            ))}
-          </div>
+          <LiveActivity
+            items={activity}
+            loading={activityLoading}
+            now={now}
+            className="h-full w-full"
+          />
         </motion.div>
       </div>
     </section>

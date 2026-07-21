@@ -100,3 +100,11 @@ marketing pages. Verification is deterministic and synthetic by design.
 - **Facilitator dependency.** The 402 challenge relies on `https://x402.org/facilitator` being
   reachable to inject `feePayer`. A transient outage degrades gracefully (`x402Ready:false`,
   `503 FACILITATOR_UNAVAILABLE` on settle) rather than crashing; it retries on the next request.
+- **Frontend tests are structural, not DOM/E2E.** No headless browser or React DOM testing stack is
+  installed, so `tests/frontend-layout.test.ts` asserts the layout/navigation refinements by reading
+  component source for stable tokens (routes, prop names, ordering). It cannot catch a purely visual
+  regression. The actual responsive/visual pass is the owner browser checklist
+  ([OWNER_ACCEPTANCE_TEST.md](OWNER_ACCEPTANCE_TEST.md) Part C) at 320/360/390/430/768/desktop.
+- **PGlite is single-writer.** The DB-backed unit tests isolate to their own dirs (so they pass even
+  with `next dev` running), but `npm run verify:samples` uses the app's own PGlite dir — stop the dev
+  server or point it at an isolated `PGLITE_DATA_DIR` (see [TESTING.md](TESTING.md)).

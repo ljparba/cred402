@@ -25,10 +25,19 @@ const LEVEL_COLOR: Record<LogLine["level"], string> = {
 };
 
 export function SystemLog({ lines, live }: { lines: LogLine[]; live: boolean }) {
-  const endRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
+  // Keep the newest line in view by scrolling ONLY this panel's own container —
+  // never the window. (The previous approach scrolled the newest line's ancestor
+  // chain, which on mobile yanked the whole page down to the log on each new line
+  // and made scanning feel like a scroll-lock; see refinement prompt §11.) Also
+  // only auto-stick when the reader is already near the bottom, so scrolling up to
+  // read earlier lines isn't fought.
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    const el = scrollRef.current;
+    if (!el) return;
+    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 48;
+    if (nearBottom) el.scrollTop = el.scrollHeight;
   }, [lines.length]);
 
   return (
@@ -47,10 +56,10 @@ export function SystemLog({ lines, live }: { lines: LogLine[]; live: boolean }) 
       </div>
 
       <div
-        className="mt-3 flex-1 space-y-0.5 overflow-y-auto scroll-thin font-mono text-[0.72rem] leading-relaxed"
+        ref={scrollRef}
+        className="mt-3 max-h-72 min-h-0 flex-1 space-y-0.5 overflow-y-auto scroll-thin font-mono text-[0.72rem] leading-relaxed"
         aria-live="polite"
         aria-label="System log"
-        style={{ maxHeight: 320 }}
       >
         <AnimatePresence initial={false}>
           {lines.map((l) => (
@@ -68,7 +77,6 @@ export function SystemLog({ lines, live }: { lines: LogLine[]; live: boolean }) 
             </motion.div>
           ))}
         </AnimatePresence>
-        <div ref={endRef} />
       </div>
     </div>
   );

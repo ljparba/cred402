@@ -16,13 +16,17 @@ suite with the `test` script:
 npm test
 ```
 
-This runs all **29 tests** across the five files below (the script lists the files explicitly so it
+This runs all **49 tests** across the seven files below (the script lists the files explicitly so it
 works identically on Windows, macOS, and Linux — a bare `tests/*.test.ts` glob is not expanded by
 Node's `--test` on every shell).
 
-The **engine test is DB-backed** and runs against an **isolated** PGlite database so it never
-touches your dev DB — it sets `PGLITE_DATA_DIR` to `./.pglite-test` itself at module load. To run it
-alone:
+The **engine and demo tests are DB-backed** and each run against their own **isolated** PGlite
+database so they never touch your dev DB. `engine.test.ts` imports `tests/lib/isolate-db.ts` as its
+**first** import — that pins `PGLITE_DATA_DIR` to `./.pglite-test` *before* `scripts/seed` →
+`scripts/lib/env` can load `.env` (which would otherwise set it to the dev dir `./.pglite`). Without
+that ordering, a running `next dev` — which holds the single-writer `./.pglite` open — would make the
+suite abort inside PGlite. `demo.test.ts` isolates to `./.pglite-demotest` the same way. To run the
+engine test alone:
 
 ```bash
 node --import tsx --test tests/engine.test.ts
@@ -37,7 +41,7 @@ PGLITE_DATA_DIR=./.pglite-test node --import tsx --test tests/engine.test.ts
 **Prerequisite for the engine test:** the sample PDFs must exist and the catalogue hashes must be
 generated, because it hashes the real files. Run `npm run certs:generate` first if you haven't.
 
-> **29 tests currently pass** across the five files below.
+> **49 tests currently pass** across the seven files below.
 
 ---
 
@@ -50,6 +54,8 @@ generated, because it hashes the real files. Run `npm run certs:generate` first 
 | `tests/engine.test.ts` | **Credential states** (DB-backed) — every downloadable sample run through the real pipeline (validate → SHA-256 → PDF ID extract → engine) resolves to its catalogue verdict: VALID ×2, TAMPERED, EXPIRED, REVOKED, UNREGISTERED_ISSUER, UNKNOWN. Asserts the flagship tamper invariant (identified credential + HCS evidence + hash mismatch) and that VALID means hash matches. |
 | `tests/hedera.test.ts` | **HCS helpers** — `toDashedTxId` (`@`-form → dashed, preserving account-id dots; idempotent; accepts a `TransactionId`-like object — a real bug was caught here); HashScan URL formats; HCS envelope builders (`buildIssuedEvent` omits `expiresAt` when absent; `buildRevokedEvent` chains to the issuance event). |
 | `tests/config.test.ts` | **Price formatting** — `tinybarsToHbar`: `10000000` → `0.1`; whole HBAR has no fraction; trailing zeros trimmed; zero. |
+| `tests/demo.test.ts` | **Create Tamper Demo** (DB-backed, offline) — synthetic registration under the forced demo issuer, the original→VALID / modified+id→TAMPERED / modified-no-id→UNKNOWN / unknown-id→UNKNOWN matrix, label sanitisation, and the DB-backed rate limiter. |
+| `tests/frontend-layout.test.ts` | **Layout & navigation guards** (structural) — the header logo is a real `/` route link with `onLogoClick`; the hero shows Live Activity (redundant proof panel removed); the homepage 35/65 row + Tamper Demo section; upload sidebar order (Sample Files → Scan Process → Issuer Hints) with no “View All” and all samples shown; the report’s Reference Samples removal + new layout; and the mobile scan-progress fix (log scrolls its own container, no fixed/`100vh` trap). No DOM runner — it reads the component source and asserts stable tokens. |
 
 The engine test seeds an isolated DB in a `before()` hook (migrate → seed) so verdicts are computed
 against the same registry the app uses, with a **fixed clock** (`2026-07-20`) so expired/valid
@@ -84,7 +90,17 @@ fake/counterfeit-certificate.pdf                 UNKNOWN              UNKNOWN   
 ```
 
 Like the engine test it uses a fixed clock (`2026-07-20`) so results don't drift with the calendar.
-It runs against your current DB, so make sure you've done `db:seed` after `certs:generate`.
+It runs against your current DB (default `./.pglite`), so make sure you've done `db:seed` after
+`certs:generate`.
+
+> **Caveat — stop `next dev` first, or point it at an isolated dir.** Unlike the unit suite,
+> `verify:samples` uses the app's own PGlite dir. PGlite is single-writer, so if a `next dev` server
+> is holding `./.pglite` open, this script aborts with a WASM `Aborted()` error. Either stop the dev
+> server, or run it against an already-seeded isolated copy, e.g.:
+>
+> ```bash
+> PGLITE_DATA_DIR=./.pglite-test npm run verify:samples   # reuses the engine test's seeded dir
+> ```
 
 ---
 
@@ -126,7 +142,7 @@ npm run db:setup
 npm run certs:generate
 npm run db:seed
 npm run verify:samples
-npm test                                   # 29 tests
+npm test                                   # 49 tests
 npm run lint
 npm run typecheck
 npm run build

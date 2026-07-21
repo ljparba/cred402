@@ -267,3 +267,128 @@ No other decisions will be escalated.
 Explicitly **not** building: university onboarding, real identity verification, NFT credentials,
 multi-chain support, admin permissions, OCR, AI verification logic, messaging, subscriptions,
 social profiles, dashboards, or marketing subpages. Verification is deterministic by design.
+
+---
+
+## 8. Enhancement update — responsive UI, `/how-it-works`, and Create Tamper Demo
+
+This update adds three connected improvements without changing the core model. Design decisions:
+
+### 8.1 Navigation + routing
+`/how-it-works` becomes a **real Next.js route** (`src/app/how-it-works/page.tsx`), never a homepage
+anchor. The single-page verification flow stays on `/` (state machine). Nav: Logo → `/`,
+How It Works → `/how-it-works`, Samples → `/#samples`, GitHub → `NEXT_PUBLIC_GITHUB_URL`,
+Verify another → `/` scan state. A shared `SiteNav` works from every state and on mobile.
+
+### 8.2 Homepage layout
+- **Row 1:** Sample Certificates, full-width responsive grid (4→3→2→1 by breakpoint).
+- **Row 2:** How It Works *preview* (compact, links to `/how-it-works`) left, Live Activity right.
+- Mobile: hero feature cards, the four stats, samples, and activity are all **one per row**
+  (no cramped 2×2). Global horizontal-overflow audit at 320/360/390/430/768px.
+
+### 8.3 Create Tamper Demo — maximal reuse
+A demo registration is a **synthetic credential under the existing `ISS-CRED402-DEMO` issuer**, so
+the existing deterministic engine and x402 report gate handle everything — no new verdict logic.
+
+- **Register** (`POST /api/demo/register`, multipart `file` + optional `label`): validate → hash in
+  memory → generate `demoCredentialId` (`CRED-DEMO-<rand>`) → insert a `credentials` row
+  (`source='demo'`, issuer forced to `ISS-CRED402-DEMO`, `sha256=originalHash`, status ACTIVE) +
+  a `CREDENTIAL_ISSUED` `credential_events` row → **when configured**, submit to HCS + record
+  `hcs_records`. Returns `demoCredentialId`, hash, HCS coords + HashScan link (or `anchored:false`
+  in unconfigured mode). The uploaded file is never persisted.
+- **Re-verify the modified copy:** `POST /api/verify` gains an optional `credentialId` field used as
+  the engine's `claimedCredentialId`. Modified file + `demoCredentialId` → hash mismatch + HCS
+  evidence exists → **TAMPERED**, released through the **existing genuine x402 report gate** (or
+  `?demo=1` in unconfigured mode). Original file → **VALID**.
+- **Lookup:** `GET /api/demo/[demoCredentialId]` returns the demo registration + proof.
+
+Honest MVP boundary: the stable `demoCredentialId` MUST be supplied explicitly on re-verification
+(a modified arbitrary file has a different hash and usually no embedded ID). No OCR, no visual match.
+
+### 8.4 Schema changes (minimal, migration `0001`)
+- `credentials.source` — `text` `$type<'seed'|'demo'>` default `'seed'` (synthetic/demo marker).
+- `rate_limit_hits` — `id` PK, `key` (`demo_register:<ipHash>`), `at` timestamptz, indexed on
+  `(key, at)`. Powers the **DB-backed** limiter (portable across PGlite/Postgres; reliable across
+  Render instances, unlike in-memory). Old rows pruned opportunistically.
+
+The HCS envelope reuses the versioned `CREDENTIAL_ISSUED` shape (v, type, eventId, credentialId,
+issuerId, sha256, issuedAt, status) — minimal proof only; no file bytes or personal data on-chain.
+
+### 8.5 Abuse protection (`/api/demo/register` writes to HCS)
+Feature flag `TAMPER_DEMO_ENABLED` (**default false**), testnet-only guard, strict upload validation
++ existing `MAX_UPLOAD_SIZE`, DB-backed rate limit (default **3 / IP / hour**), issuer **forced**
+server-side to `ISS-CRED402-DEMO` (no client issuer/topic/payer), sanitized labels, no raw-file
+storage, safe-metadata logging only, clean typed errors (403 disabled / 403 not-testnet /
+429 rate-limited / 415 invalid file). IP is hashed before storage.
+
+### 8.6 New environment variables
+`TAMPER_DEMO_ENABLED=false`, `TAMPER_DEMO_RATE_LIMIT_MAX=3`,
+`TAMPER_DEMO_RATE_LIMIT_WINDOW_SECONDS=3600`, `NEXT_PUBLIC_GITHUB_URL`.
+
+### 8.7 Testing + safety
+Because the deployment is now **configured** (live testnet keys), all automated tests run on the
+**offline/deterministic** path and never call `POST /api/pay` or `POST /api/demo/register` live. The
+live HCS anchor + x402 settlement remain **owner acceptance steps**. Responsive checks are
+deterministic layout assertions + an owner browser checklist (no headless browser installed).
+
+## 9. Final frontend layout & mobile refinement (supersedes §8.2)
+
+A layout/usability pass only — no changes to the Hedera/HCS/x402/verification/DB behavior. This
+section is authoritative for the homepage/report/upload layout; §8.2 is superseded.
+
+### 9.1 Header logo → always `/`
+The shared `Nav` logo stays a **real `<Link href="/">`** (never a scroll anchor), keyboard-focusable
+with a visible focus ring. It gains an optional `onLogoClick`; the homepage passes `goHome`, which
+resets the in-page flow state machine to the landing stage and scrolls to the top — so the logo
+"returns home" even from an in-page flow stage (scan / payment / progress / report), where a plain
+same-route link would be a no-op. From every other route the link navigates normally.
+
+### 9.2 Hero right column → Live Activity
+The hero's right column previously repeated the HCS/x402/tamper "proof cards" already shown
+elsewhere. It now renders the real **`LiveActivity`** feed (recent HCS/payment/verification items
+with HashScan links, contained vertical scroll). `Hero` takes `activity`/`activityLoading`/`now`
+from the page. On mobile the three hero areas (headline+CTAs+feature cards, scanner, Live Activity)
+each become one full-width row.
+
+### 9.3 Homepage order (final)
+Header → Hero (content · scanner · Live Activity) → Stats → **How It Works preview (35%) + Sample
+Certificates (65%)** as a responsive `lg:grid-cols-[minmax(0,35fr)_minmax(0,65fr)]` row → **Original
+vs. Tampered — Create Tamper Demo** full-width band (`TamperDemoTeaser`, CTA → `/how-it-works#tamper-demo`,
+concise synthetic-data disclaimer; it does **not** duplicate the full `/how-it-works` workflow) →
+Footer. Samples keep their 4→3→2→1 responsive grid and all actions. Mobile: one full-width section
+per row in reading order.
+
+### 9.4 Upload/scan sidebar + Sample Files
+Right column order is **Sample Files → Scan Process → Issuer Hints** (Scan Process moved above Issuer
+Hints). Sample Files drops the unreliable **“View All”** link and lists **all** samples in a
+contained vertical scroll (`max-h` + `overflow-y-auto`, never horizontal), preserving status/type
+labels and select behavior.
+
+### 9.5 Final report cleanup
+The **Reference Samples** box is removed (and with it the `samples`/`onUseSample` props on `Report`
+and its callers). New layout: a top row of **Credential · Verdict · Payment Proof** (verdict leads on
+mobile via `order-*`), then a wide **Verification Checks** area beside a supporting column of **HCS
+Proof + Verification Activity**, aligned from the top with tighter gaps and no tall empty columns.
+Long values keep `min-w-0` + `break-all`/middle-truncation + copy buttons + HashScan links.
+
+### 9.6 Mobile scan-progress scroll fix
+Root cause: `SystemLog` called `endRef.scrollIntoView()` on every new log line, which scrolls **all**
+scroll ancestors including the window — on mobile this yanked the page down each ~850 ms during
+scanning and felt like a scroll-lock. Fix: scroll only the log panel's **own** container
+(`el.scrollTop = el.scrollHeight`), and only when the reader is already near the bottom. The
+scan-progress layout uses normal document flow — no `position: fixed`, no `100vh`/`h-screen`, no body
+scroll-lock; live logs keep a small internal scroll while the page scrolls freely both ways.
+
+### 9.7 Test-isolation fix (supporting)
+The DB-backed `engine.test.ts` silently used the dev DB `./.pglite` because `scripts/seed` imports
+`scripts/lib/env` (loads `.env`, which sets `PGLITE_DATA_DIR=./.pglite`) during the import phase,
+before the test's own `||=`. With a `next dev` holding that single-writer dir open, PGlite aborted.
+Fixed with a first-evaluated `tests/lib/isolate-db.ts` that pins `./.pglite-test` before `.env` is
+read, matching the test's documented "never touches your dev DB" intent.
+
+### 9.8 Frontend tests
+No DOM/E2E runner is wired up, so `tests/frontend-layout.test.ts` adds **structural guards** (read the
+component source; assert stable tokens: the logo `/` route link, Live Activity in the hero, the 35/65
+row, the Tamper Demo section, the upload sidebar order + no “View All”, the report’s Reference-Samples
+removal + new layout, and the system-log container-scroll fix). Human-eye responsive checks (320 /
+360 / 390 / 430 / 768 / desktop) are the owner browser checklist in `OWNER_ACCEPTANCE_TEST.md` Part C.

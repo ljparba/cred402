@@ -3,13 +3,40 @@
 > Pay-per-use credential verification on Hedera.
 > Status labels: `NOT STARTED` · `IN PROGRESS` · `BLOCKED` · `PASS` · `FAIL` · `COMPLETE`
 
-**Last updated:** 2026-07-20
+**Last updated:** 2026-07-21
 
 ---
 
 ## Current phase
 
-**All phases complete — HANDOFF-READY** (pending owner Hedera keys for live settlement; see below).
+**Final frontend layout & mobile refinement — `COMPLETE` (2026-07-21):** a layout/usability pass
+(no feature rewrite). Header logo is a real `/` route link that also resets the in-page flow; the
+hero's redundant proof panel is replaced by **Live Activity**; homepage reordered to Hero → Stats →
+**How It Works (35%) + Sample Certificates (65%)** → **Original vs. Tampered — Create Tamper Demo**;
+upload sidebar reordered to **Sample Files → Scan Process → Issuer Hints** with the “View All”
+control removed and all samples shown in a contained scroll; the final report drops **Reference
+Samples** and adopts a Credential · Verdict · Payment top row over Checks + HCS/Activity with tighter
+spacing; and the **mobile scan-progress scroll-lock is fixed** (the live-log panel now scrolls its
+own container instead of `scrollIntoView`-ing the whole window). Also fixed a latent test-isolation
+bug so the DB-backed suite no longer collides with a running `next dev`. Details:
+`IMPLEMENTATION_PLAN.md` §9.
+
+**Enhancement update — `COMPLETE`:** responsive UI fixes, a dedicated `/how-it-works` route, and
+a controlled Create Tamper Demo feature (register an original on HCS → prove a modified copy is
+`TAMPERED`). See `IMPLEMENTATION_PLAN.md` §8. Base build (Phases 0–9) remains complete/handoff-ready.
+
+Deployment is now **configured** (owner added live testnet keys), so all automated tests run on the
+offline path; live HCS anchoring + x402 settlement stay owner acceptance steps. The
+`TAMPER_DEMO_ENABLED` flag defaults **false** so no endpoint writes to HCS during development.
+
+### Enhancement task list
+- [ ] Backend: `credentials.source` + `rate_limit_hits` table + migration `0001`; config env vars +
+  testnet guard; `/api/verify` optional `credentialId`; `/api/demo/register` + `/api/demo/[id]`;
+  DB-backed rate limiter; `/api/health` exposes `tamperDemo.enabled`; offline unit tests.
+- [ ] Frontend: nav → real routes; homepage layout (full-width samples row + how-it-works/activity
+  row); mobile one-per-row cards/stats/samples/activity; report responsive + mobile stack order;
+  global overflow audit; `/how-it-works` page (sections A–J); Create Tamper Demo multi-step UI.
+- [ ] Docs, production gates, checkpoint commit.
 
 ---
 
@@ -49,7 +76,8 @@
 
 ## Test status
 
-- `npm test` → **29/29 pass** (hash, config, upload, hedera, engine/6-states). `verify:samples` → 7/7 correct verdicts. `typecheck`, `lint`, `next build` all clean.
+- `npm test` → **49/49 pass** (hash 5, config 4, upload 7, hedera 6, engine/6-states 7, demo 5, frontend-layout 15). `verify:samples` → 7/7 correct verdicts. `typecheck`, `lint`, `next build` all clean (`/` 185 kB, `/how-it-works` 184 kB First Load JS).
+- Note: `verify:samples` and the DB-backed unit tests use PGlite (single-writer). The unit suite now isolates its dirs even with `next dev` running; `verify:samples` still needs the dev server stopped or an isolated `PGLITE_DATA_DIR` (see `TESTING.md`).
 
 ## Known issues
 

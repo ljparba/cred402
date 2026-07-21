@@ -29,6 +29,12 @@ export interface HealthResponse {
     demoPayerConfigured: boolean;
   };
   upload: { maxBytes: number };
+  tamperDemo: {
+    enabled: boolean;
+    testnet: boolean;
+    rateLimitMax: number;
+    rateLimitWindowSeconds: number;
+  };
 }
 
 // ── /api/activity ────────────────────────────────────────────────────────────
@@ -160,6 +166,36 @@ export interface ReportResponse {
   payment: ReportPayment;
 }
 
+// ── /api/demo/register — Create Tamper Demo registration ─────────────────────
+export interface DemoHcsProof {
+  topicId: string;
+  sequenceNumber: number;
+  transactionId: string;
+  consensusTimestamp: string | null;
+  hashscanUrl: string;
+  topicUrl: string;
+}
+export interface DemoRegisterResponse {
+  demoCredentialId: string;
+  sha256: string;
+  issuerId: string;
+  issuerName: string;
+  label: string;
+  anchored: boolean;
+  hcs: DemoHcsProof | null;
+  network: string;
+  demo: true;
+  synthetic: true;
+  createdAt: string;
+  disclaimer: string;
+  labels: string[];
+  nextSteps: { message: string; verifyWith: string };
+  rateLimit: { remaining: number; limit: number };
+}
+
+/** A typed error carrying the server `code` + HTTP status for clean UI handling. */
+export type ApiThrown = Error & { code?: string; status?: number };
+
 // ── Fetch helpers ────────────────────────────────────────────────────────────
 
 /** GET JSON, throwing a typed error on non-2xx. */
@@ -176,20 +212,57 @@ export const api = {
   activity: (signal?: AbortSignal) => getJson<ActivityResponse>("/api/activity", signal),
   samples: (signal?: AbortSignal) => getJson<SamplesResponse>("/api/samples", signal),
 
-  /** Upload a file for a free, locked preview. Throws { error, code } on 415/400. */
-  async verify(file: File | Blob, filename: string): Promise<VerifyResponse> {
+  /**
+   * Upload a file for a free, locked preview. Throws { error, code } on 415/400.
+   * Pass `credentialId` to bind the upload to a specific credential — used by the
+   * Create-Tamper-Demo re-verification (a modified copy carries the demo id so
+   * the engine can prove the hash diverged from the anchored original).
+   */
+  async verify(
+    file: File | Blob,
+    filename: string,
+    credentialId?: string,
+  ): Promise<VerifyResponse> {
     const form = new FormData();
     form.append("file", file, filename);
+    if (credentialId) form.append("credentialId", credentialId);
     const res = await fetch("/api/verify", { method: "POST", body: form });
     const body = await res.json();
     if (!res.ok) {
       const err = body as ApiError;
-      const e = new Error(err.error ?? "Verification failed") as Error & { code?: string; status: number };
+      const e = new Error(err.error ?? "Verification failed") as ApiThrown;
       e.code = err.code;
       e.status = res.status;
       throw e;
     }
     return body as VerifyResponse;
+  },
+
+  /**
+   * Register an ORIGINAL file as a synthetic demo credential (Create Tamper
+   * Demo). Real HCS write when configured — callers must gate this on
+   * `health.tamperDemo.enabled` and confirm the user intent first. Throws a
+   * typed error carrying the server `code` (FEATURE_DISABLED / NOT_TESTNET /
+   * RATE_LIMITED / INVALID_FILE) + HTTP status.
+   */
+  async demoRegister(
+    file: File | Blob,
+    filename: string,
+    label?: string,
+  ): Promise<DemoRegisterResponse> {
+    const form = new FormData();
+    form.append("file", file, filename);
+    if (label) form.append("label", label);
+    const res = await fetch("/api/demo/register", { method: "POST", body: form });
+    const body = await res.json();
+    if (!res.ok) {
+      const err = body as ApiError;
+      const e = new Error(err.error ?? "Demo registration failed") as ApiThrown;
+      e.code = err.code;
+      e.status = res.status;
+      throw e;
+    }
+    return body as DemoRegisterResponse;
   },
 
   /**

@@ -7,6 +7,9 @@
  * Runs against an ISOLATED PGlite DB so it never touches the app's dev database:
  *   PGLITE_DATA_DIR=./.pglite-test node --import tsx --test tests/engine.test.ts
  */
+// MUST be first: isolate the PGlite dir before `scripts/seed` → `scripts/lib/env`
+// loads `.env` (which would otherwise pin this suite to the dev DB `./.pglite`).
+import "./lib/isolate-db";
 import { test, before } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -19,11 +22,9 @@ import { validateUpload } from "@/lib/verify/upload";
 import { verify } from "@/lib/verify/engine";
 import { samples } from "../scripts/data/catalog";
 
-// Always run against an isolated DB so the suite never touches the app's dev
-// database, regardless of how the runner is invoked (cross-platform: no inline
-// env needed in the npm script). Set before any getDb() call (which happens in
-// `before`, after this module-level line runs).
-process.env.PGLITE_DATA_DIR ||= "./.pglite-test";
+// The isolated PGlite dir is set by the first import (`./lib/isolate-db`), which
+// runs before `.env` can pin this suite to the dev DB. See that module for why
+// the assignment can't live in this file's body.
 
 // Fixed clock so expired/valid classification is deterministic.
 const NOW = new Date("2026-07-20T12:00:00Z");

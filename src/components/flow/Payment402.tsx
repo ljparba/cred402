@@ -161,16 +161,16 @@ export function Payment402({
           </div>
 
           {/* sub-steps rail */}
-          <ol className="flex items-center justify-between gap-1">
+          <ol className="flex items-start justify-between gap-1">
             {SUBSTEPS.map((s, i) => {
               const done = i < activeIdx;
               const active = i === activeIdx;
               return (
-                <li key={s.n} className="flex flex-1 items-center gap-1">
-                  <div className="flex flex-col items-center gap-1 text-center">
+                <li key={s.n} className="flex min-w-0 flex-1 items-start gap-1">
+                  <div className="flex min-w-0 flex-1 flex-col items-center gap-1 text-center">
                     <span
                       className={cn(
-                        "grid h-9 w-9 place-items-center rounded-full border text-sm font-semibold",
+                        "grid h-9 w-9 shrink-0 place-items-center rounded-full border text-sm font-semibold",
                         done && "border-brand bg-brand text-white",
                         active && "border-brand bg-[color:rgba(0,180,255,0.14)] text-brand-2",
                         !done && !active && "border-border text-ink-faint",
@@ -178,12 +178,17 @@ export function Payment402({
                     >
                       {done ? <CheckCircle2 className="h-4 w-4" /> : s.n}
                     </span>
-                    <span className={cn("text-[0.62rem] font-medium leading-tight", active ? "text-brand-2" : "text-ink-faint")}>
+                    <span
+                      className={cn(
+                        "w-full text-[0.6rem] font-medium leading-tight sm:text-[0.62rem]",
+                        active ? "text-brand-2" : "text-ink-faint",
+                      )}
+                    >
                       {s.title}
                     </span>
                   </div>
                   {i < SUBSTEPS.length - 1 && (
-                    <ChevronRight className={cn("h-4 w-4 shrink-0", done ? "text-brand" : "text-ink-faint/50")} />
+                    <ChevronRight className={cn("mt-2 h-4 w-4 shrink-0", done ? "text-brand" : "text-ink-faint/50")} />
                   )}
                 </li>
               );

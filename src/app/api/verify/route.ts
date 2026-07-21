@@ -26,6 +26,14 @@ export const dynamic = "force-dynamic";
 /** How long the verification request + its nonce stay valid for payment. */
 const REQUEST_TTL_MS = 15 * 60 * 1000;
 
+/** Accept only a safe credential-id shape (letters, digits, dashes; capped). */
+function sanitizeCredentialId(value: FormDataEntryValue | null): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+  return /^[A-Za-z0-9-]{1,80}$/.test(trimmed) ? trimmed.toUpperCase() : undefined;
+}
+
 export async function POST(req: NextRequest) {
   return safeHandler("api/verify", async () => {
     let form: FormData;
@@ -49,7 +57,10 @@ export async function POST(req: NextRequest) {
     }
 
     const uploadedHash = sha256(bytes);
-    const claimedCredentialId = await extractCredentialId(bytes, validation.kind);
+    // An explicit credentialId (e.g. a Create-Tamper-Demo id supplied when
+    // re-uploading a modified copy) takes precedence over PDF-embedded ids.
+    const explicitId = sanitizeCredentialId(form.get("credentialId"));
+    const claimedCredentialId = explicitId ?? (await extractCredentialId(bytes, validation.kind));
     const result = await verify({ uploadedHash, claimedCredentialId });
 
     const requestId = newRequestId();

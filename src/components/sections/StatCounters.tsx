@@ -69,7 +69,7 @@ export function StatCounters({ stats }: { stats: ActivityStats | null }) {
   };
 
   return (
-    <GlassPanel className="grid grid-cols-2 divide-border lg:grid-cols-4 lg:divide-x">
+    <GlassPanel className="grid grid-cols-1 divide-y divide-border sm:grid-cols-2 sm:divide-y-0 lg:grid-cols-4 lg:divide-x">
       <StatCard icon={FileText} value={s.certificatesAnchored} label="Certificates Anchored" delta="24.6%" index={0} />
       <StatCard icon={Search} value={s.verifications} label="Verifications" delta="18.3%" index={1} />
       <StatCard icon={Boxes} value={s.hcsEvents} label="HCS Events" delta="27.8%" index={2} />

@@ -47,6 +47,7 @@ export const publicConfig = {
   hashscanBaseUrl: stripTrailingSlash(
     env("NEXT_PUBLIC_HASHSCAN_BASE_URL") ?? "https://hashscan.io/testnet",
   ),
+  githubUrl: env("NEXT_PUBLIC_GITHUB_URL") ?? "https://github.com/",
 } as const;
 
 // ── Server-only ──────────────────────────────────────────────────────────────
@@ -139,6 +140,26 @@ export const serverConfig = {
   get maxUploadSize(): number {
     requireServer("maxUploadSize");
     return envInt("MAX_UPLOAD_SIZE", 5 * 1024 * 1024);
+  },
+
+  // Tamper demo (Create Tamper Demo feature)
+  /** True when the network is Hedera testnet — the demo is testnet-only. */
+  get isTestnet(): boolean {
+    requireServer("isTestnet");
+    return (env("HEDERA_NETWORK") ?? "testnet").toLowerCase() === "testnet";
+  },
+  /** Master switch for the public demo-registration endpoint. Default OFF. */
+  get tamperDemoEnabled(): boolean {
+    requireServer("tamperDemoEnabled");
+    return (env("TAMPER_DEMO_ENABLED") ?? "false").toLowerCase() === "true";
+  },
+  get tamperDemoRateLimitMax(): number {
+    requireServer("tamperDemoRateLimitMax");
+    return envInt("TAMPER_DEMO_RATE_LIMIT_MAX", 3);
+  },
+  get tamperDemoRateLimitWindowSeconds(): number {
+    requireServer("tamperDemoRateLimitWindowSeconds");
+    return envInt("TAMPER_DEMO_RATE_LIMIT_WINDOW_SECONDS", 3600);
   },
 } as const;
 

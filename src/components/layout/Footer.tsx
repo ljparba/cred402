@@ -4,14 +4,16 @@
  */
 "use client";
 
+import Link from "next/link";
 import { ExternalLink } from "lucide-react";
 import { Logo } from "@/components/brand/Logo";
+import { publicConfig } from "@/lib/config";
 
 export function Footer() {
   return (
     <footer className="mx-auto max-w-[1440px] px-4 pb-8 pt-14 sm:px-6 lg:px-8">
       <div className="flex flex-col items-start justify-between gap-6 border-t border-border pt-8 md:flex-row md:items-center">
-        <div>
+        <div className="min-w-0">
           <Logo />
           <p className="mt-3 max-w-md text-sm text-ink-dim">
             Pay-per-use credential verification on Hedera. Accountless, machine-readable,
@@ -21,15 +23,18 @@ export function Footer() {
             Testnet proof of concept — synthetic demo data only, no real credentials.
           </p>
         </div>
-        <div className="flex items-center gap-6 text-sm">
-          <a href="#how-it-works" className="text-ink-dim transition-colors hover:text-ink">
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
+          <Link href="/how-it-works" className="text-ink-dim transition-colors hover:text-ink">
             How it Works
-          </a>
-          <a href="#samples" className="text-ink-dim transition-colors hover:text-ink">
+          </Link>
+          <Link href="/#samples" className="text-ink-dim transition-colors hover:text-ink">
             Samples
-          </a>
+          </Link>
+          <Link href="/how-it-works#tamper-demo" className="text-ink-dim transition-colors hover:text-ink">
+            Tamper Demo
+          </Link>
           <a
-            href="https://github.com/"
+            href={publicConfig.githubUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1 text-ink-dim transition-colors hover:text-ink"

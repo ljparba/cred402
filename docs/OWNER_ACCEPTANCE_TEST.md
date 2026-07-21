@@ -164,11 +164,61 @@ and the headline counters update.
 
 ---
 
+## Part C — Frontend layout & responsive acceptance (browser, no keys required)
+
+These are the human-eye checks for the final layout/usability refinement. The automated suite guards
+the structure (`tests/frontend-layout.test.ts`), but the visual/responsive judgement is yours. Do
+them in a desktop browser, then repeat the mobile ones with devtools device emulation.
+
+### C1. Navigation
+
+- [ ] Click the **Cred402 logo** from each of: homepage, upload/scan, payment (402), scan progress,
+      final report, `/how-it-works`, and the Tamper Demo — every time it returns to the homepage `/`.
+- [ ] The logo is keyboard-focusable (Tab to it) with a visible focus ring, and Enter activates it.
+- [ ] The nav **How it Works** link opens the real `/how-it-works` route.
+- [ ] In any flow stage, **Back to home** appears near the **top** (not only at the bottom).
+
+### C2. Homepage
+
+- [ ] The hero **right side shows Live Activity** (recent HCS/payment/verification items with HashScan
+      links) — the old repeated HCS/x402/tamper "proof cards" panel is gone.
+- [ ] Desktop: **How It Works (left) and Sample Certificates (right)** in roughly a **35 / 65** split.
+- [ ] The **Original vs. Tampered — Create Tamper Demo** section is present, with a CTA that opens
+      `/how-it-works#tamper-demo`, and a concise synthetic-data disclaimer.
+- [ ] Sample cards: no clipped titles, no overlapping buttons; **Use this sample** and **Download**
+      both still work.
+
+### C3. Upload / Scan page
+
+- [ ] Right column order is **Sample Files → Scan Process → Issuer Hints**.
+- [ ] There is **no “View All”** control; **all** samples are listed in the Sample Files panel,
+      scrolling **vertically inside the panel** (never sideways), each row readable and selectable.
+
+### C4. Final report
+
+- [ ] There is **no “Reference Samples”** box.
+- [ ] Top row reads **Credential · Verdict · Payment Proof**; below it, **Verification Checks** sit
+      beside **HCS Proof + Verification Activity** with tight spacing (no tall empty columns).
+- [ ] Long values (hashes, tx/request/topic ids, filenames, consensus timestamps) stay contained —
+      they wrap/truncate with copy buttons and HashScan links intact; no horizontal overflow.
+
+### C5. Mobile (test at 320 / 360 / 390 / 430 px, plus 768 px)
+
+- [ ] **No page-level horizontal scrollbar** on any page; nothing is wider than the viewport.
+- [ ] Homepage stacks in order: hero content → scanner → Live Activity → stats → How It Works →
+      Samples → Tamper Demo → footer; one full-width section per row.
+- [ ] **Scan progress scrolls freely up and down while scanning** — the live logs no longer yank the
+      page down; the page is not locked/sticky/full-screen. Only the log box scrolls internally.
+- [ ] Buttons and tap targets are comfortable; text wraps safely; focus states remain visible.
+
+---
+
 ## Acceptance sign-off
 
 - [ ] Part A passes end-to-end (unconfigured demo is convincing and honest).
 - [ ] Part B passes end-to-end (a real testnet settlement releases the report; replay is rejected).
-- [ ] Production checks pass: `npm run lint`, `npm run typecheck`, `npm run build`
+- [ ] Part C passes — layout, navigation, and mobile responsiveness at 320/360/390/430/768/desktop.
+- [ ] Production checks pass: `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`
       (see [TESTING.md](TESTING.md)).
 - [ ] The [Known Limitations](KNOWN_LIMITATIONS.md) match your understanding — nothing is hidden.
 

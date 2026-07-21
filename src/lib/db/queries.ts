@@ -19,6 +19,40 @@ import type {
   VerificationResult,
 } from "./schema";
 
+// ── demo registration (Create Tamper Demo) ───────────────────────────────────
+/** Ensure the synthetic demo issuer exists (registered), idempotently. */
+export async function ensureIssuer(id: string, name: string): Promise<void> {
+  const db = await getDb();
+  await db
+    .insert(schema.issuers)
+    .values({ id, name, registered: true })
+    .onConflictDoUpdate({ target: schema.issuers.id, set: { name, registered: true } });
+}
+
+export async function insertCredential(
+  row: typeof schema.credentials.$inferInsert,
+): Promise<Credential> {
+  const db = await getDb();
+  const [created] = await db.insert(schema.credentials).values(row).returning();
+  return created;
+}
+
+export async function insertCredentialEvent(
+  row: typeof schema.credentialEvents.$inferInsert,
+): Promise<CredentialEvent> {
+  const db = await getDb();
+  const [created] = await db.insert(schema.credentialEvents).values(row).returning();
+  return created;
+}
+
+export async function insertHcsRecord(
+  row: typeof schema.hcsRecords.$inferInsert,
+): Promise<HcsRecord> {
+  const db = await getDb();
+  const [created] = await db.insert(schema.hcsRecords).values(row).returning();
+  return created;
+}
+
 // ── credentials ──────────────────────────────────────────────────────────────
 export async function findCredentialByHash(sha256: string): Promise<Credential | undefined> {
   const db = await getDb();
