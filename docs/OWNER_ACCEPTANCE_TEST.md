@@ -236,14 +236,39 @@ them in a desktop browser, then repeat the mobile ones with devtools device emul
       observed a real HCS topic/messages, a completed x402 HBAR settlement, Mirror confirmation, and
       HashScan proof.
 
-### C8. Global responsive sweep
+### C8. Payment / 402 page (mobile)
+
+- [ ] The **402 Payment Required** card is fully inside the viewport (no right-side cutoff/clipped
+      title); the amount wraps safely.
+- [ ] The 4-step payment stepper (Request → Payment Required → Settlement → Report Unlocked) fits at
+      **320px** without overflow.
+- [ ] The **Wallet → Cred402 API → Hedera** diagram fits inside the card (circles scaled down, labels
+      wrap / shorten to "Hedera"); no node or particle escapes the card.
+- [ ] **Pay with x402 · 0.1 tHBAR** and **Use Demo Wallet** are full-width, stacked, with full labels
+      (no truncation); loading/disabled/focus states still work.
+- [ ] The HCS/Decentralized/Tamper/Fast-Settlement grid is 2 columns and readable.
+- [ ] **Transaction Preview** rows stack (label above value); Pay To / Fee Payer / Recipient /
+      Facilitator / Request ID stay inside the card (wrap or truncate) with copy buttons visible.
+
+### C9. Footer & bottom status bar (mobile)
+
+- [ ] Footer content stacks: logo → description → testnet disclaimer → nav links; the yellow
+      disclaimer **wraps** and is readable at 320px (not cut off).
+- [ ] Footer nav is a 2-column grid (or wrapped) that never exceeds the viewport; GitHub icon aligned.
+- [ ] The **bottom network/status bar is NOT sticky on mobile** — it sits at the end of the page in
+      normal flow (scroll to it), items wrap (Network / Mirror Node / Mode / Price / Facilitator / DB),
+      and **View on HashScan is on its own full-width row**. No horizontal status strip / no side-scroll.
+- [ ] On desktop the status bar returns to a single sticky bottom row.
+
+### C10. Global responsive sweep
 
 Check **no horizontal scrollbar / no clipped card / no overlapping badge or title** at each width:
 
 ```text
-320 / 360 / 390 / 430 / 768 / 1024 / 1280 / 1366 / 1440 / 1536 / large desktop
+320 / 360 / 390 / 425 / 430 / 768 / 1024 / 1280 / 1366 / 1440 / 1536 / large desktop
 ```
 
+- [ ] `document.documentElement.scrollWidth === document.documentElement.clientWidth` at every mobile width.
 - [ ] Homepage mobile order: hero content → scanner → Live Activity → stats → How It Works → Samples
       → Tamper Demo → footer (one full-width section per row).
 - [ ] Buttons and tap targets are comfortable; text wraps safely; focus states remain visible.

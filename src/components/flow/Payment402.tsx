@@ -84,10 +84,13 @@ export function Payment402({
         <ArrowLeft className="h-4 w-4" /> Back to Scan
       </button>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,0.85fr)_minmax(0,1.4fr)_minmax(0,0.85fr)]">
+      {/* One column by default; the 3-column layout only activates at xl. Every
+          wrapper/card is w-full/min-w-0/max-w-full so nothing exceeds the mobile
+          content column. */}
+      <div className="grid w-full min-w-0 max-w-full grid-cols-1 gap-6 xl:grid-cols-[minmax(0,0.85fr)_minmax(0,1.4fr)_minmax(0,0.85fr)]">
         {/* ── Left: request + raw server response ────────────────────────── */}
-        <div className="flex flex-col gap-5">
-          <GlassPanel className="p-5">
+        <div className="flex w-full min-w-0 max-w-full flex-col gap-5">
+          <GlassPanel className="w-full min-w-0 max-w-full overflow-hidden p-5">
             <div className="flex items-center gap-2">
               <CheckCircle2 className="h-5 w-5 text-ok" />
               <span className="text-[0.7rem] font-semibold uppercase tracking-wider text-ink-faint">
@@ -100,9 +103,9 @@ export function Payment402({
             </p>
           </GlassPanel>
 
-          <GlassPanel className="border-[color:rgba(239,68,68,0.35)] p-5">
+          <GlassPanel className="w-full min-w-0 max-w-full overflow-hidden border-[color:rgba(239,68,68,0.35)] p-5">
             <div className="flex items-center gap-2">
-              <XCircle className="h-5 w-5 text-danger" />
+              <XCircle className="h-5 w-5 shrink-0 text-danger" />
               <span className="text-[0.7rem] font-semibold uppercase tracking-wider text-ink-faint">
                 Server Response
               </span>
@@ -111,16 +114,16 @@ export function Payment402({
             <p className="text-xs text-ink-dim">Pay-per-use access via x402</p>
             <dl className="mt-3 space-y-1.5 border-t border-border pt-3 font-mono text-xs">
               <div className="flex justify-between gap-2">
-                <dt className="text-ink-faint">Status</dt>
-                <dd className="text-ink-dim">402 Payment Required</dd>
+                <dt className="shrink-0 text-ink-faint">Status</dt>
+                <dd className="min-w-0 break-words text-right text-ink-dim">402 Payment Required</dd>
               </div>
               <div className="flex justify-between gap-2">
-                <dt className="text-ink-faint">Header</dt>
-                <dd className="text-ink-dim">PAYMENT-REQUIRED</dd>
+                <dt className="shrink-0 text-ink-faint">Header</dt>
+                <dd className="min-w-0 break-words text-right text-ink-dim">PAYMENT-REQUIRED</dd>
               </div>
               <div className="flex justify-between gap-2">
-                <dt className="text-ink-faint">Configured</dt>
-                <dd className={challenge?.configured ? "text-ok" : "text-warn"}>
+                <dt className="shrink-0 text-ink-faint">Configured</dt>
+                <dd className={cn("min-w-0 break-words text-right", challenge?.configured ? "text-ok" : "text-warn")}>
                   {challenge?.configured ? "true" : "false"}
                 </dd>
               </div>
@@ -128,7 +131,7 @@ export function Payment402({
           </GlassPanel>
 
           {/* locked preview */}
-          <GlassPanel className="relative overflow-hidden p-5">
+          <GlassPanel className="relative w-full min-w-0 max-w-full overflow-hidden p-5">
             <div className="flex flex-col items-center gap-2 py-4 text-center">
               <div className="grid h-14 w-14 place-items-center rounded-full border border-border bg-[color:rgba(5,9,18,0.7)]">
                 <Lock className="h-6 w-6 text-ink-faint" />
@@ -145,58 +148,65 @@ export function Payment402({
         </div>
 
         {/* ── Centre: 402 headline + flow + actions ──────────────────────── */}
-        <GlassPanel glow className="flex flex-col gap-6 p-6 sm:p-8">
+        <GlassPanel glow className="flex w-full min-w-0 max-w-full flex-col gap-6 overflow-hidden p-5 sm:p-8">
           <div className="text-center">
             <motion.h1
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="text-3xl font-bold tracking-tight text-ink sm:text-4xl"
+              className="break-words text-2xl font-bold tracking-tight text-ink sm:text-4xl"
             >
               402 Payment Required
             </motion.h1>
-            <p className="mt-2 text-sm text-ink-dim sm:text-base">
+            <p className="mt-2 break-words text-sm text-ink-dim sm:text-base">
               Pay <span className="font-semibold text-brand-ink">{price} tHBAR</span> to unlock the
               verification report.
             </p>
           </div>
 
-          {/* sub-steps rail */}
-          <ol className="flex items-start justify-between gap-1">
+          {/* sub-steps rail — shrink-safe 4-col grid, no fixed-width connectors */}
+          <ol className="grid w-full min-w-0 max-w-full grid-cols-4 gap-1">
             {SUBSTEPS.map((s, i) => {
               const done = i < activeIdx;
               const active = i === activeIdx;
               return (
-                <li key={s.n} className="flex min-w-0 flex-1 items-start gap-1">
-                  <div className="flex min-w-0 flex-1 flex-col items-center gap-1 text-center">
+                <li key={s.n} className="flex min-w-0 max-w-full flex-col items-center gap-1 text-center">
+                  <div className="relative flex w-full min-w-0 items-center justify-center">
+                    {i < SUBSTEPS.length - 1 && (
+                      <ChevronRight
+                        aria-hidden
+                        className={cn(
+                          "pointer-events-none absolute right-0 top-1/2 h-4 w-4 -translate-y-1/2 translate-x-1/2",
+                          done ? "text-brand" : "text-ink-faint/50",
+                        )}
+                      />
+                    )}
                     <span
                       className={cn(
-                        "grid h-9 w-9 shrink-0 place-items-center rounded-full border text-sm font-semibold",
+                        "relative z-10 grid h-9 w-9 shrink-0 place-items-center rounded-full border text-sm font-semibold",
                         done && "border-brand bg-brand text-white",
                         active && "border-brand bg-[color:rgba(0,180,255,0.14)] text-brand-2",
-                        !done && !active && "border-border text-ink-faint",
+                        !done && !active && "border-border bg-canvas text-ink-faint",
                       )}
+                      aria-current={active ? "step" : undefined}
                     >
                       {done ? <CheckCircle2 className="h-4 w-4" /> : s.n}
                     </span>
-                    <span
-                      className={cn(
-                        "w-full text-[0.6rem] font-medium leading-tight sm:text-[0.62rem]",
-                        active ? "text-brand-2" : "text-ink-faint",
-                      )}
-                    >
-                      {s.title}
-                    </span>
                   </div>
-                  {i < SUBSTEPS.length - 1 && (
-                    <ChevronRight className={cn("mt-2 h-4 w-4 shrink-0", done ? "text-brand" : "text-ink-faint/50")} />
-                  )}
+                  <span
+                    className={cn(
+                      "min-w-0 max-w-full break-words text-[0.58rem] font-medium leading-tight sm:text-[0.62rem]",
+                      active ? "text-brand-2" : "text-ink-faint",
+                    )}
+                  >
+                    {s.title}
+                  </span>
                 </li>
               );
             })}
           </ol>
 
           {/* particle flow */}
-          <div className="rounded-2xl border border-border bg-[color:rgba(5,9,18,0.5)] p-5 sm:p-6">
+          <div className="w-full min-w-0 max-w-full overflow-hidden rounded-2xl border border-border bg-[color:rgba(5,9,18,0.5)] p-4 sm:p-6">
             <PaymentFlow active={busy} />
           </div>
 
@@ -204,37 +214,41 @@ export function Payment402({
             Pay-per-use access. No account required.
           </p>
 
-          {/* actions */}
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Button size="lg" onClick={onPay} disabled={busy}>
+          {/* actions — stacked + full-width on mobile, 2-up from sm */}
+          <div className="grid w-full min-w-0 max-w-full gap-3 sm:grid-cols-2">
+            <Button size="lg" className="w-full min-w-0" onClick={onPay} disabled={busy}>
               {busy ? (
                 <>
-                  <Loader2 className="h-5 w-5 animate-spin" /> Settling…
+                  <Loader2 className="h-5 w-5 shrink-0 animate-spin" /> Settling…
                 </>
               ) : (
                 <>
-                  <HexBadge size={22} glow={false} /> Pay with x402 · {price} tHBAR
+                  <HexBadge size={22} glow={false} className="shrink-0" /> Pay with x402 · {price} tHBAR
                 </>
               )}
             </Button>
-            <Button size="lg" variant="outline" onClick={onPay} disabled={busy}>
-              <Cred402Mark className="h-5 w-5" /> Use Demo Wallet
+            <Button size="lg" variant="outline" className="w-full min-w-0" onClick={onPay} disabled={busy}>
+              <Cred402Mark className="h-5 w-5 shrink-0" /> Use Demo Wallet
             </Button>
           </div>
 
-          {/* feature strip */}
-          <div className="grid grid-cols-2 gap-3 border-t border-border pt-5 sm:grid-cols-4">
+          {/* feature strip — 2 cols on mobile, 4 from sm */}
+          <div className="grid w-full min-w-0 max-w-full grid-cols-2 gap-3 border-t border-border pt-5 sm:grid-cols-4">
             {[
               { icon: Boxes, t: "HCS Proof", s: "Delivered" },
               { icon: HexBadge, t: "Decentralized", s: "Immutable", hex: true },
               { icon: ShieldCheck, t: "Tamper Check", s: "Deterministic" },
               { icon: Zap, t: "Fast Settlement", s: "~2-5 seconds" },
             ].map((f) => (
-              <div key={f.t} className="flex items-center gap-2">
-                {f.hex ? <HexBadge size={22} /> : <f.icon className="h-5 w-5 text-brand-2" />}
-                <div>
-                  <div className="text-xs font-semibold text-ink">{f.t}</div>
-                  <div className="text-[0.65rem] text-ink-faint">{f.s}</div>
+              <div key={f.t} className="flex min-w-0 max-w-full items-center gap-2">
+                {f.hex ? (
+                  <HexBadge size={22} className="shrink-0" />
+                ) : (
+                  <f.icon className="h-5 w-5 shrink-0 text-brand-2" />
+                )}
+                <div className="min-w-0">
+                  <div className="break-words text-xs font-semibold text-ink">{f.t}</div>
+                  <div className="break-words text-[0.65rem] text-ink-faint">{f.s}</div>
                 </div>
               </div>
             ))}
@@ -242,45 +256,46 @@ export function Payment402({
         </GlassPanel>
 
         {/* ── Right: transaction preview / metadata ──────────────────────── */}
-        <GlassPanel className="flex flex-col gap-5 p-5">
+        <GlassPanel className="flex w-full min-w-0 max-w-full flex-col gap-5 overflow-hidden p-5">
           <span className="text-[0.7rem] font-semibold uppercase tracking-wider text-ink-faint">
             Transaction Preview
           </span>
 
-          <div>
+          <div className="min-w-0">
             <p className="text-xs text-ink-faint">You pay</p>
-            <p className="text-3xl font-bold text-ink">
+            <p className="break-words text-3xl font-bold text-ink">
               {price} <span className="text-lg text-ink-dim">tHBAR</span>
             </p>
           </div>
 
-          <div className="border-t border-border pt-4">
+          <div className="min-w-0 border-t border-border pt-4">
             <p className="text-xs text-ink-faint">To</p>
             <div className="mt-1 flex items-center justify-between gap-2">
-              <span className="text-sm font-medium text-ink">Cred402 API</span>
-              <Cred402Mark className="h-6 w-6" />
+              <span className="min-w-0 break-words text-sm font-medium text-ink">Cred402 API</span>
+              <Cred402Mark className="h-6 w-6 shrink-0" />
             </div>
             {payTo ? (
               <CopyHash value={payTo} label="payTo account" className="mt-2 w-full justify-between" />
             ) : (
-              <p className="mt-2 font-mono text-xs text-ink-faint">payTo pending (testnet keys)</p>
+              <p className="mt-2 break-all font-mono text-xs text-ink-faint">payTo pending (testnet keys)</p>
             )}
           </div>
 
-          <div className="border-t border-border pt-4">
+          <div className="min-w-0 border-t border-border pt-4">
             <p className="text-xs text-ink-faint">Fee Payer (facilitator)</p>
             {feePayer ? (
               <CopyHash value={feePayer} label="fee payer" className="mt-1.5 w-full justify-between" />
             ) : (
-              <p className="mt-1.5 font-mono text-xs text-ink-faint">— (advertised once configured)</p>
+              <p className="mt-1.5 break-all font-mono text-xs text-ink-faint">— (advertised once configured)</p>
             )}
           </div>
 
-          <div className="border-t border-border pt-4">
+          <div className="min-w-0 border-t border-border pt-4">
             <p className="mb-2 text-[0.7rem] font-semibold uppercase tracking-wider text-ink-faint">
               Payment Metadata
             </p>
-            <dl className="space-y-2 text-sm">
+            {/* Rows stack (label above value) on mobile; horizontal from sm. */}
+            <dl className="space-y-3 text-sm">
               {[
                 ["Protocol", `x402 v${challenge?.x402Version ?? 2}`],
                 ["Network", network],
@@ -288,15 +303,18 @@ export function Payment402({
                 ["Amount", `${price} tHBAR`],
                 ["Scheme", accept?.scheme ?? "exact"],
               ].map(([k, v]) => (
-                <div key={k} className="flex items-center justify-between gap-2">
-                  <dt className="text-ink-faint">{k}</dt>
-                  <dd className="truncate font-mono text-xs text-ink-dim">{v}</dd>
+                <div
+                  key={k}
+                  className="flex flex-col items-start gap-0.5 text-left sm:flex-row sm:items-center sm:justify-between sm:gap-2"
+                >
+                  <dt className="shrink-0 text-ink-faint">{k}</dt>
+                  <dd className="min-w-0 max-w-full break-all font-mono text-xs text-ink-dim sm:text-right">{v}</dd>
                 </div>
               ))}
-              <div className="flex items-center justify-between gap-2">
-                <dt className="text-ink-faint">Request ID</dt>
-                <dd className="truncate">
-                  <CopyHash value={requestId} label="request id" />
+              <div className="flex flex-col items-start gap-1 text-left sm:flex-row sm:items-center sm:justify-between sm:gap-2">
+                <dt className="shrink-0 text-ink-faint">Request ID</dt>
+                <dd className="min-w-0 max-w-full">
+                  <CopyHash value={requestId} label="request id" className="w-full justify-between sm:w-auto" />
                 </dd>
               </div>
             </dl>

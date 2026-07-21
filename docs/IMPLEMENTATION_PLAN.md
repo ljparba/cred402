@@ -475,3 +475,34 @@ documented per-endpoint (Tamper Demo DB limit vs no global limit on general veri
 KNOWN_LIMITATIONS / PROGRESS / this plan. Stale "owner-blocked / not executed" wording corrected in
 README, PROGRESS, HEDERA_SETUP, X402_FLOW; test counts updated to **58**; sample-grid breakpoints and
 bundle sizes refreshed; OWNER_ACCEPTANCE_TEST Part C extended.
+
+### 10.7 Payment / 402 page mobile
+The main workspace grid is `grid-cols-1` (3-col only at `xl`); every column, card, and `motion.div`
+is `w-full min-w-0 max-w-full` (`overflow-hidden` on cards). Concrete overflow sources fixed: (a) the
+**payment stepper** (Request → Payment Required → Settlement → Report Unlocked) was a
+`justify-between`/`flex-1` rail whose contents set the width — rebuilt as a shrink-safe
+`grid w-full min-w-0 grid-cols-4` with the chevron connectors absolutely positioned (no fixed width);
+(b) the **Wallet → Cred402 API → Hedera diagram** used fixed 80px node circles with non-wrapping
+labels (~285px intrinsic) — rebuilt as a `grid w-full min-w-0 grid-cols-3` with circles that scale
+down on mobile (`h-14` → `sm:h-20`), scaled icons, wrapping/short mobile labels ("Hedera"), and a
+single **percentage-positioned** wire behind the (opaque) circles carrying the particles; (c) the
+**Transaction Preview** rows were desktop label/value rows — now `flex-col` (label above value) on
+mobile, `sm:flex-row` on desktop, `items-start text-left`, with account/request/tx IDs `min-w-0
+break-all` and `shrink-0` copy buttons (via `CopyHash`). Payment buttons are `w-full` and stack on
+mobile (2-up from `sm`) with full labels; the feature grid is `grid-cols-2` on mobile (`sm:grid-cols-4`)
+with `shrink-0` icons and `break-words` text. No fixed-pixel/`min-w-[…]` widths remain (only the page
+container `max-w-[1440px]`). The genuine 402 flow, x402/demo-wallet actions, and all proof values are
+unchanged.
+
+### 10.8 Footer + bottom network/status bar mobile
+**Footer** stacks on mobile (logo → description → disclaimer → nav) with `w-full min-w-0 max-w-full`
+wrappers; the nav is a `grid-cols-2` on mobile that becomes an inline `sm:flex` row; the yellow testnet
+disclaimer — previously an `inline-flex` pill sized by its own long sentence (a 320px overflow source)
+— is now a **full-width wrapping block** (`flex w-full max-w-full … break-words`, `md:w-fit` to
+restore the desktop pill). **NetworkStatusBar** was a single `sticky` row with an internal
+`overflow-x-auto` strip (a mobile trap). It is now **static in normal footer flow on mobile** and
+**sticky only at `lg`** (`lg:sticky lg:bottom-0`, never `position: fixed`): status items lay out as a
+`grid-cols-1` (mobile) → `sm:grid-cols-2` → `lg:flex` row; long Mirror-Node / facilitator hosts use
+`break-all`; the network badge leads and **View on HashScan gets its own full-width row** on mobile
+(`w-full … lg:w-auto lg:ml-auto`). Every item is `min-w-0`; no body scroll-lock; keyboard/focus and
+reduced-motion preserved.

@@ -31,6 +31,11 @@ const report = read("src/components/flow/Report.tsx");
 const systemLog = read("src/components/flow/SystemLog.tsx");
 const verificationEngine = read("src/components/flow/VerificationEngine.tsx");
 const tamperTeaser = read("src/components/sections/TamperDemoTeaser.tsx");
+const payment = read("src/components/flow/Payment402.tsx");
+const paymentFlow = read("src/components/viz/PaymentFlow.tsx");
+const footer = read("src/components/layout/Footer.tsx");
+const statusBar = read("src/components/layout/NetworkStatusBar.tsx");
+const copyHash = read("src/components/ui/CopyHash.tsx");
 
 /** Index of the nth occurrence of a section label, or -1. */
 function labelIndex(src: string, label: string): number {
@@ -305,4 +310,73 @@ test("system log panel is contained and scrolls its own container", () => {
   assert.match(systemLog, /w-full min-w-0 max-w-full[\s\S]*?overflow-hidden[\s\S]*?rounded-2xl/);
   assert.doesNotMatch(systemLog, /\.scrollIntoView\s*\(/);
   assert.match(systemLog, /el\.scrollTop = el\.scrollHeight/);
+});
+
+// ── Payment / 402 page mobile (final payment-footer prompt §3–§9) ──────────────
+
+test("payment page has no fixed-pixel/min widths that can overflow mobile", () => {
+  assertNoFixedWidths("Payment402", payment);
+  assertNoFixedWidths("PaymentFlow", paymentFlow);
+});
+
+test("payment main grid is one column by default; 3-col only at xl", () => {
+  assert.match(payment, /grid w-full min-w-0 max-w-full grid-cols-1[\s\S]*?xl:grid-cols-\[/);
+  assert.doesNotMatch(payment, /(?:md|lg):grid-cols-\[minmax/);
+  // Several shrink-safe wrappers/cards.
+  const shrinkSafe = payment.match(/w-full min-w-0 max-w-full/g) ?? [];
+  assert.ok(shrinkSafe.length >= 6, `expected several shrink-safe payment wrappers, got ${shrinkSafe.length}`);
+});
+
+test("payment stepper is a shrink-safe 4-col grid (no fixed-width connectors)", () => {
+  assert.match(payment, /grid w-full min-w-0 max-w-full grid-cols-4/);
+  // The old justify-between/flex-1 intrinsic-width rail is gone.
+  assert.doesNotMatch(payment, /<ol className="flex items-start justify-between/);
+});
+
+test("wallet/API/Hedera diagram is a shrink-safe 3-col grid with min-w-0 nodes", () => {
+  assert.match(paymentFlow, /grid w-full min-w-0 max-w-full grid-cols-3/);
+  assert.match(paymentFlow, /flex min-w-0 max-w-full flex-col items-center/); // each node
+  // Circles scale down on mobile (no single oversized fixed circle).
+  assert.match(paymentFlow, /h-14 w-14[\s\S]*?sm:h-20 sm:w-20/);
+});
+
+test("payment buttons are full-width on mobile and keep their full labels", () => {
+  assert.match(payment, /className="w-full min-w-0"[\s\S]*?Pay with x402/);
+  assert.match(payment, /className="w-full min-w-0"[\s\S]*?Use Demo Wallet/);
+});
+
+test("transaction preview rows stack on mobile (label above value)", () => {
+  assert.match(payment, /flex flex-col items-start[\s\S]*?sm:flex-row/);
+  // Long technical values wrap safely; copy button icons stay shrink-0.
+  assert.match(payment, /break-all font-mono/);
+  assert.match(copyHash, /shrink-0/);
+});
+
+// ── Footer & bottom status bar mobile (final payment-footer prompt §10–§11) ────
+
+test("footer stacks on mobile and the nav is a 2-col grid before going inline", () => {
+  assert.match(footer, /flex w-full min-w-0 max-w-full flex-col[\s\S]*?md:flex-row/);
+  assert.match(footer, /grid w-full min-w-0 max-w-full grid-cols-2[\s\S]*?sm:flex/);
+});
+
+test("footer testnet disclaimer is a full-width wrap-safe block, not content-width", () => {
+  assert.match(footer, /flex w-full max-w-full items-start gap-2 break-words[\s\S]*?Testnet proof of concept/);
+  // No longer an inline-flex pill sized by its own text.
+  assert.doesNotMatch(footer, /inline-flex[^"]*Testnet proof/);
+});
+
+test("bottom status bar is non-sticky on mobile and sticky only at desktop", () => {
+  assert.match(statusBar, /lg:sticky lg:bottom-0/);
+  // Not stuck to the viewport at mobile widths…
+  assert.doesNotMatch(statusBar, /(?<!lg:)sticky bottom-0/);
+  // …and never position:fixed / a fixed footer.
+  assert.doesNotMatch(statusBar, /position:\s*fixed|fixed inset|\bfixed bottom-0/);
+});
+
+test("status items wrap safely; HashScan gets its own full-width mobile row", () => {
+  assert.match(statusBar, /grid w-full min-w-0 max-w-full grid-cols-1[\s\S]*?sm:grid-cols-2/);
+  assert.match(statusBar, /break-all font-mono/); // long mirror/facilitator values
+  assert.match(statusBar, /w-full shrink-0[\s\S]*?lg:w-auto[\s\S]*?View on HashScan/);
+  // No internal horizontal scroll strip anymore.
+  assert.doesNotMatch(statusBar, /overflow-x-auto/);
 });

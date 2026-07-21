@@ -12,7 +12,7 @@ Related: [OWNER_ACCEPTANCE_TEST.md](OWNER_ACCEPTANCE_TEST.md), [DEMO_SCRIPT.md](
 
 - [ ] `npm run lint` passes
 - [ ] `npm run typecheck` passes
-- [ ] `npm test` — **67 tests pass**
+- [ ] `npm test` — **77 tests pass**
 - [ ] `npm run verify:samples` — all 7 samples classify correctly
 - [ ] `npm run build` succeeds
 - [ ] `npm run start` boots the production build
