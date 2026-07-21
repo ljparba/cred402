@@ -161,14 +161,19 @@ export function UploadScan({
             </div>
           )}
 
-          {/* actions */}
+          {/* actions — full-width on mobile, natural width from sm up */}
           <div className="flex flex-wrap gap-3">
             {identified ? (
-              <Button size="lg" onClick={onContinue}>
+              <Button size="lg" className="w-full sm:w-auto" onClick={onContinue}>
                 Continue to Payment <ArrowRight className="h-4.5 w-4.5" />
               </Button>
             ) : (
-              <Button size="lg" onClick={onBeginScan} disabled={!selectedFile || scanning}>
+              <Button
+                size="lg"
+                className="w-full sm:w-auto"
+                onClick={onBeginScan}
+                disabled={!selectedFile || scanning}
+              >
                 {scanning ? (
                   <>
                     <Loader2 className="h-4.5 w-4.5 animate-spin" /> Scanning…
@@ -185,14 +190,16 @@ export function UploadScan({
 
         {/* ── Right: sample files → scan process → issuer hints ──────────── */}
         <div className="flex flex-col gap-5">
-          {/* Sample Files — ALL samples in a controlled vertical scroll; no
-              browse-all link, every sample is selectable directly. */}
+          {/* Sample Files — ALL samples, every one selectable directly (no
+              browse-all link). Internal scroll only as a sidebar at xl+; on
+              mobile/tablet it stays in normal document flow (no nested scroll
+              trap), matching refinement §5. */}
           <GlassPanel className="flex min-h-0 flex-col p-5">
             <div className="flex items-center justify-between gap-2">
               <SectionLabel>Sample Files</SectionLabel>
               <span className="shrink-0 text-xs text-ink-faint">{samples.length} files</span>
             </div>
-            <ul className="mt-4 max-h-80 space-y-2 overflow-y-auto scroll-thin pr-1">
+            <ul className="mt-4 space-y-2 xl:max-h-80 xl:overflow-y-auto xl:scroll-thin xl:pr-1">
               {samples.map((s) => (
                 <li key={s.slug}>
                   <button

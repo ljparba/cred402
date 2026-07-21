@@ -3,7 +3,7 @@
 > Pay-per-use credential verification on Hedera.
 
 **Status:** living document. Updated whenever architecture or implementation changes.
-**Last updated:** 2026-07-20
+**Last updated:** 2026-07-21
 
 ---
 
@@ -392,3 +392,72 @@ component source; assert stable tokens: the logo `/` route link, Live Activity i
 row, the Tamper Demo section, the upload sidebar order + no “View All”, the report’s Reference-Samples
 removal + new layout, and the system-log container-scroll fix). Human-eye responsive checks (320 /
 360 / 390 / 430 / 768 / desktop) are the owner browser checklist in `OWNER_ACCEPTANCE_TEST.md` Part C.
+
+## 10. Final frontend, responsive, security & docs closeout
+
+The closeout pass — Sample-card + laptop-header polish, the two remaining broken mobile states, a
+security review, and doc corrections. No product/behavior changes.
+
+### 10.1 Sample Certificate cards
+Card content order is now preview → **status badge on its own row, above the title, aligned left**
+(no longer inline beside the title) → title (up to 3 lines) → clamped description → bottom-aligned
+actions with the **full "Use this sample" label** (the truncating span is gone) and a same-height
+download button. Responsive grid `grid-cols-1 md:grid-cols-2 2xl:grid-cols-3` — **1 column on mobile,
+2 on tablet/laptop, 3 only at 1536px+** (the panel is only 65% of the desktop row, so 3-up is too
+cramped on a normal laptop). Cards are `h-full min-w-0` so a row keeps consistent height with no
+overflow; status colors, keyboard access, and focus states are preserved.
+
+### 10.2 Compact laptop header
+Three tiers: `< 1024px` mobile (logo + compact circular verify icon + slide-down drawer); `1024–1535`
+compact laptop (tighter gaps, compact Verify pill, the network badge shortened to "Hedera Testnet",
+the redundant circular Hedera icon hidden); `1536px+` full desktop ("Built on Hedera Testnet",
+comfortable spacing, icon shown). The mobile/desktop boundary moved from `md` (768) to `lg` (1024) so
+laptop widths get the one-line compact header instead of a crowded desktop row. The logo stays a real
+`<Link href="/">`; keyboard nav + visible focus preserved.
+
+### 10.3 Upload / Ready-to-Scan mobile
+Single column below `xl` with a full-width upload box and preview (`max-w-full`), the **Begin Scan /
+Continue buttons full-width on mobile** (`w-full sm:w-auto`), 16px page padding, and the Sample Files
+list back in **normal document flow** on mobile (its internal scroll is gated to `xl:` so there's no
+nested scroll trap). Long filenames wrap (`break-words`). All upload validation/scan behavior intact.
+
+### 10.4 Post-payment Verification Progress mobile
+Already single-column below `xl` in the correct order (title → certificate preview → checks → overall
+progress → live logs → Proof & Trace). Hardened for narrow screens: `min-w-0` on the log line text so
+it ellipsizes instead of forcing width, Proof & Trace stacks (`grid-cols-1 sm:grid-cols-2`), and the
+log auto-scroll (from §9.6) only moves the log container — never the page. No `position: fixed`, no
+`100vh`/`h-screen`, no body scroll-lock; the page scrolls freely while processing; reduced-motion
+preserved.
+
+### 10.5 Security review (verify-and-preserve; no code changes)
+Confirmed intact: **secrets** — no secret **values** reach the client bundle (`/` client chunks were
+scanned: no private-key/DER/64-hex material), `/api/health` returns booleans + public endpoints
+(never key values or the raw recipient), and logs use a hash prefix + a SHA-256-hashed IP. One
+minor, non-leaking finding + recommendation: because client components (Nav, Footer, `hashscan.ts`)
+import `publicConfig` from the same `src/lib/config.ts` that also reads server env vars, the server
+env-var **names** (e.g. `HEDERA_OPERATOR_PRIVATE_KEY`) appear as string literals in a client chunk.
+No **values** are inlined — Next.js only inlines `NEXT_PUBLIC_*`, and a browser `process.env[name]`
+is `undefined` — and the names are already public in `.env.example`, so this is hygiene, not a leak.
+*Recommendation (not implemented — avoids an architecture change to working, non-leaking code):*
+split `publicConfig` into its own `src/lib/public-config.ts` so the server-config module never enters
+the client bundle at all.
+**Uploads** — magic-byte sniff (PDF/PNG/JPEG), size + empty + declared-type-mismatch rejection, never
+persisted. **Tamper Demo** — flag off by default, testnet-only, issuer forced server-side (no
+client-chosen issuer/topic/payer), DB-backed 3/IP/hour limit with SHA-256-hashed IP, minimal HCS
+proof (no bytes/PII), synthetic/demo/testnet/demo-issuer labels, disclaimer before + after.
+**General `/api/verify`** — no global rate limit (documented honestly; recommend edge limits for
+production). **x402** — no verdict/checks leak pre-payment, configured mode ignores `?demo=1`,
+replay-check-first, DB-UNIQUE single-use tx binding, independent Mirror confirmation of SUCCESS +
+exact amount + recipient, idempotent re-access, 409 on reuse, no client claim trusted without Mirror.
+**HCS** — minimal proof only, correct HashScan links, Mirror lag handled, re-seeding never re-anchors.
+**Errors** — `safeHandler` returns typed clean errors with no stack traces; no live writes on render;
+state changes require explicit clicks.
+
+### 10.6 Documentation corrections
+`KNOWN_LIMITATIONS.md` §1 rewritten: **live HCS anchoring + x402 settlement were owner-verified on
+Hedera Testnet** (real topic/messages, completed HBAR settlement, Mirror confirmation, HashScan
+proof — owner-run acceptance; mainnet out of scope; no secrets/tx details recorded). Rate-limiting is
+documented per-endpoint (Tamper Demo DB limit vs no global limit on general verification) across
+KNOWN_LIMITATIONS / PROGRESS / this plan. Stale "owner-blocked / not executed" wording corrected in
+README, PROGRESS, HEDERA_SETUP, X402_FLOW; test counts updated to **58**; sample-grid breakpoints and
+bundle sizes refreshed; OWNER_ACCEPTANCE_TEST Part C extended.

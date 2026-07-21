@@ -9,6 +9,19 @@
 
 ## Current phase
 
+**Final frontend, responsive, security & docs closeout — `COMPLETE (implementation)` (2026-07-21):**
+Sample Certificate cards redesigned (preview → status badge on its own row above the title → title →
+description → actions; full "Use this sample" label; grid **1 col mobile / 2 col tablet-laptop /
+3 col only at 1536px+**). Laptop header made compact at 1024–1535px (tighter gaps, compact Verify
+pill, network badge shortened to "Hedera Testnet", redundant circular icon hidden) with mobile below
+1024px. Two remaining broken mobile states fixed: **Upload / Ready-to-Scan** (full-width, Begin Scan
+full-width, sidebar returns to normal flow) and **post-payment Verification Progress** (one section
+per row, `min-w-0`, safe wrapping, freely scrollable — no fixed/`100vh`/body-lock). A focused
+**security review** confirmed the secrets / upload / Tamper Demo / x402 / HCS / error-handling
+controls are intact (no code changes required). Docs corrected (live HCS/x402 owner-verified, rate-limit
+distinction, breakpoints, bundle sizes, test counts). Details: `IMPLEMENTATION_PLAN.md` §10.
+Remaining: owner browser visual checks (`OWNER_ACCEPTANCE_TEST.md` Part C).
+
 **Final frontend layout & mobile refinement — `COMPLETE` (2026-07-21):** a layout/usability pass
 (no feature rewrite). Header logo is a real `/` route link that also resets the in-page flow; the
 hero's redundant proof panel is replaced by **Live Activity**; homepage reordered to Hero → Stats →
@@ -25,18 +38,20 @@ bug so the DB-backed suite no longer collides with a running `next dev`. Details
 a controlled Create Tamper Demo feature (register an original on HCS → prove a modified copy is
 `TAMPERED`). See `IMPLEMENTATION_PLAN.md` §8. Base build (Phases 0–9) remains complete/handoff-ready.
 
-Deployment is now **configured** (owner added live testnet keys), so all automated tests run on the
-offline path; live HCS anchoring + x402 settlement stay owner acceptance steps. The
+Deployment is **configured** (owner added live testnet keys). **Live HCS anchoring and real x402
+settlement were owner-verified on Hedera Testnet** (real topic + messages, a completed HBAR
+settlement, independent Mirror Node confirmation, HashScan proof observed — owner-run acceptance
+actions). Automated tests still run on the offline/deterministic path (they never spend HBAR). The
 `TAMPER_DEMO_ENABLED` flag defaults **false** so no endpoint writes to HCS during development.
 
 ### Enhancement task list
-- [ ] Backend: `credentials.source` + `rate_limit_hits` table + migration `0001`; config env vars +
+- [x] Backend: `credentials.source` + `rate_limit_hits` table + migration `0001`; config env vars +
   testnet guard; `/api/verify` optional `credentialId`; `/api/demo/register` + `/api/demo/[id]`;
   DB-backed rate limiter; `/api/health` exposes `tamperDemo.enabled`; offline unit tests.
-- [ ] Frontend: nav → real routes; homepage layout (full-width samples row + how-it-works/activity
-  row); mobile one-per-row cards/stats/samples/activity; report responsive + mobile stack order;
-  global overflow audit; `/how-it-works` page (sections A–J); Create Tamper Demo multi-step UI.
-- [ ] Docs, production gates, checkpoint commit.
+- [x] Frontend: nav → real routes; homepage layout; mobile one-per-row cards/stats/samples/activity;
+  report responsive + mobile stack order; global overflow audit; `/how-it-works` page (sections A–J);
+  Create Tamper Demo multi-step UI.
+- [x] Docs, production gates, checkpoint commit.
 
 ---
 
@@ -46,13 +61,13 @@ offline path; live HCS anchoring + x402 settlement stay owner acceptance steps. 
 |---|-------|--------|----------|
 | 0 | Inspection, plan, tracker | `COMPLETE` | Mockups present; `IMPLEMENTATION_PLAN.md` + this tracker committed; core deps installed |
 | 1 | Database, schema, migrations, seed | `COMPLETE` | Migration `0000_wonderful_paper_doll.sql` (9 tables) applies clean to fresh PGlite; seed idempotent (2 runs → issuers 2 / credentials 12 / events 14 / samples 7); relational queries verified; `tsc --noEmit` clean |
-| 2 | Hedera + HCS layer | `COMPLETE` | `src/lib/hedera/{types,client,hcs,mirror,hashscan}.ts` + provisioning scripts; unconfigured-safe; self-test passed (dashed-tx-id, envelope shape, HashScan URLs); caught+fixed a `toDashedTxId` bug; `tsc` clean. Live topic/anchor owner-blocked pending keys |
+| 2 | Hedera + HCS layer | `COMPLETE` | `src/lib/hedera/{types,client,hcs,mirror,hashscan}.ts` + provisioning scripts; unconfigured-safe; self-test passed (dashed-tx-id, envelope shape, HashScan URLs); caught+fixed a `toDashedTxId` bug; `tsc` clean. **Live topic creation + HCS anchoring owner-verified on testnet** (HashScan proof observed) |
 | 3 | Certificate + demo data | `COMPLETE` | `certs:generate` renders 7 deterministic sample PDFs; byte-stable across 2 runs; tamper pair hashes provably differ (`a05bac…` vs `13f7a6…`, both embed CRED-2026-0004); real hashes seeded; `tsc` clean |
 | 4 | Verification engine + protected API | `COMPLETE` | Engine classifies all 7 samples correctly (`verify:samples` → VALID×2/TAMPERED/EXPIRED/REVOKED/UNREGISTERED_ISSUER/UNKNOWN). Live dev-server smoke test: `/api/verify` returns locked preview with NO verdict leaked; `/api/samples`, `/api/samples/[slug]` (serves PDF), `/api/activity`, `/api/health` all 200; invalid upload → 415. PGlite works under Next via `serverExternalPackages` |
-| 5 | x402 flow | `COMPLETE` | Genuine x402 v2: `GET /api/report/[id]` with no payment → **HTTP 402** carrying a valid `PAYMENT-REQUIRED` header (scheme exact / hedera:testnet / asset 0.0.0 / amount 10000000 / maxTimeout 180) with a **real `extra.feePayer: 0.0.9185802` injected live by x402.org's public facilitator**. No verdict/checks leak pre-payment. Replay-check-first → verify → settle → independent Mirror proof → UNIQUE-tx binding. Rejections verified: 404 REQUEST_NOT_FOUND, 400 BAD_PAYMENT_SIGNATURE, 400 pay-unconfigured. `tsc` clean. **Live settlement (steps 4–7) owner-blocked** pending operator + demo-payer keys + testnet-HBAR spend authorization |
-| 6 | Frontend + animations | `COMPLETE` | 32 components covering all 5 mockup states (hero/scan/402/engine/report), rebranded to Cred402, new SVG logo, framer-motion animations, `prefers-reduced-motion` honoured, responsive, a11y (aria-live/focus/keyboard). `next build` succeeds (`/` 178 kB First Load). Live prod check: page renders all sections + no "VerifyEd"; full flow works (tampered → `?demo=1` → verdict TAMPERED with hash-diff + 6 checks) |
-| 7 | Test suite | `PASS` (core) | `npm test` → **29 tests pass** (Node built-in runner + tsx, no new deps): hash 5 / config 4 / upload 7 / hedera 6 / engine 7 (all six credential states vs real PDFs). Engine suite self-isolates to `./.pglite-test` |
-| 8 | Fix, harden, retest | `COMPLETE` | Production gates all green: no stray "VerifyEd"; no hardcoded secrets/keys in source; no server secret under `NEXT_PUBLIC`; `tsc --noEmit` 0 errors; `eslint` clean; `npm test` 29/29; `next build` succeeds; live prod smoke test passes |
+| 5 | x402 flow | `COMPLETE` | Genuine x402 v2: `GET /api/report/[id]` with no payment → **HTTP 402** carrying a valid `PAYMENT-REQUIRED` header (scheme exact / hedera:testnet / asset 0.0.0 / amount 10000000 / maxTimeout 180) with a **real `extra.feePayer: 0.0.9185802` injected live by x402.org's public facilitator**. No verdict/checks leak pre-payment. Replay-check-first → verify → settle → independent Mirror proof → UNIQUE-tx binding. Rejections verified: 404 REQUEST_NOT_FOUND, 400 BAD_PAYMENT_SIGNATURE, 400 pay-unconfigured. `tsc` clean. **Live x402 settlement owner-verified on Hedera Testnet** — real fee-sponsored HBAR settlement, independent Mirror Node confirmation (SUCCESS + exact-amount credit), HashScan proof observed |
+| 6 | Frontend + animations | `COMPLETE` | Components covering all 5 mockup states (hero/scan/402/engine/report), rebranded to Cred402, new SVG logo, framer-motion animations, `prefers-reduced-motion` honoured, responsive, a11y (aria-live/focus/keyboard). `next build` succeeds. Live prod check: page renders all sections; full flow works (tampered → `?demo=1` → verdict TAMPERED with hash-diff + 6 checks). Layout later refined — see §9/§10 for the current homepage, header, sample-card, and mobile behavior |
+| 7 | Test suite | `PASS` | `npm test` → **58 tests pass** (Node built-in runner + tsx, no new deps): hash 5 / config 4 / upload 7 / hedera 6 / engine 7 (all six credential states vs real PDFs) / demo 5 / frontend-layout 24 (structural UI/nav guards). DB-backed suites self-isolate (`./.pglite-test`, `./.pglite-demotest`) |
+| 8 | Fix, harden, retest | `COMPLETE` | Production gates all green: no hardcoded secrets/keys in source; no server secret under `NEXT_PUBLIC`; `tsc --noEmit` 0 errors; `eslint` clean; `npm test` 58/58; `next build` succeeds; live prod smoke test passes |
 | 9 | Docs + handoff | `COMPLETE` | 13 files: README + 12 docs (ARCHITECTURE, HEDERA_SETUP, X402_FLOW, DATABASE, LOCAL_SETUP, RENDER_DEPLOYMENT, TESTING, OWNER_ACCEPTANCE_TEST, DEMO_SCRIPT, BOUNTY_SUBMISSION_CHECKLIST, KNOWN_LIMITATIONS). Cross-linked; correctly branded |
 
 ---
@@ -76,12 +91,12 @@ offline path; live HCS anchoring + x402 settlement stay owner acceptance steps. 
 
 ## Test status
 
-- `npm test` → **49/49 pass** (hash 5, config 4, upload 7, hedera 6, engine/6-states 7, demo 5, frontend-layout 15). `verify:samples` → 7/7 correct verdicts. `typecheck`, `lint`, `next build` all clean (`/` 185 kB, `/how-it-works` 184 kB First Load JS).
-- Note: `verify:samples` and the DB-backed unit tests use PGlite (single-writer). The unit suite now isolates its dirs even with `next dev` running; `verify:samples` still needs the dev server stopped or an isolated `PGLITE_DATA_DIR` (see `TESTING.md`).
+- `npm test` → **58/58 pass** (hash 5, config 4, upload 7, hedera 6, engine/6-states 7, demo 5, frontend-layout 24). `verify:samples` → 7/7 correct verdicts. `typecheck`, `lint`, `next build` all clean (`/` 185 kB, `/how-it-works` 184 kB First Load JS).
+- Note: `verify:samples` and the DB-backed unit tests use PGlite (single-writer). The unit suite isolates its dirs even with `next dev` running; `verify:samples` still needs the dev server stopped or an isolated `PGLITE_DATA_DIR` (see `TESTING.md`).
 
 ## Known issues
 
-- None blocking. Honest limitations captured in `docs/KNOWN_LIMITATIONS.md`: live x402 settlement + live HCS anchoring are owner-blocked (need testnet keys); the `?demo=1` report bypass exists only in unconfigured mode; the Hedera `exact` scheme can't bind a nonce into the signed tx (replay is covered by DB-unique tx + independent Mirror proof); no rate limiting yet (testnet PoC).
+- None blocking. Honest limitations captured in `docs/KNOWN_LIMITATIONS.md`: **live HCS anchoring + x402 settlement were owner-verified on Hedera Testnet** (owner-run acceptance; testnet PoC scope only); the `?demo=1` report bypass exists only in unconfigured mode; the Hedera `exact` scheme can't bind a nonce into the signed tx (replay is covered by DB-unique tx + independent Mirror proof); **Tamper Demo has a DB-backed rate limit (3/IP/hour when enabled) but general `/api/verify` has no global rate limit** (add edge limits for public/production use).
 
 ## Decisions made
 
@@ -103,4 +118,8 @@ See `docs/OWNER_ACCEPTANCE_TEST.md` and `docs/HEDERA_SETUP.md`. Only these need 
 
 ## Final readiness status
 
-`HANDOFF-READY` — everything runs and demonstrates end-to-end in unconfigured mode today (real 402 challenge + simulated report). Live HCS anchoring and live x402 settlement activate the moment the owner adds testnet keys — no code changes needed.
+`HANDOFF-READY` — everything runs end-to-end. In unconfigured mode a reviewer gets a real 402
+challenge + a clearly-labelled simulated report with no keys; with the owner's testnet keys, **live
+HCS anchoring and real x402 settlement have been owner-verified on Hedera Testnet** (Mirror-confirmed,
+HashScan proof). Remaining before final sign-off: the owner browser/visual checklist
+(`OWNER_ACCEPTANCE_TEST.md` Part C). Scope stays a Hedera Testnet proof of concept.

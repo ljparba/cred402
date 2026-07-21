@@ -68,10 +68,12 @@ Check which mode you're in at any time: `GET /api/health` reports `"mode": "conf
 
 **Code-complete and handoff-ready.** Everything builds, tests, and demonstrates end-to-end today in
 unconfigured mode — including a *genuine* HTTP 402 challenge whose `feePayer` is discovered live from
-the public x402.org facilitator. What has **not** been executed is a fully keyed run: **live HCS
-anchoring (`npm run hedera:anchor`) and live x402 on-chain settlement remain owner acceptance steps
-that require Hedera Testnet keys** (see [OWNER_ACCEPTANCE_TEST.md](docs/OWNER_ACCEPTANCE_TEST.md) and
-[HEDERA_SETUP.md](docs/HEDERA_SETUP.md)). No code changes are needed to activate them.
+the public x402.org facilitator. **Live HCS anchoring (`npm run hedera:anchor`) and real x402 on-chain
+settlement have been owner-verified on Hedera Testnet** — a real topic + messages, a completed
+fee-sponsored HBAR settlement, independent Mirror Node confirmation, and HashScan proof (owner-run
+acceptance actions that require Hedera Testnet keys; see
+[OWNER_ACCEPTANCE_TEST.md](docs/OWNER_ACCEPTANCE_TEST.md) and
+[HEDERA_SETUP.md](docs/HEDERA_SETUP.md)). This remains a Hedera Testnet proof of concept.
 
 ---
 
@@ -165,7 +167,7 @@ describes the UI at a high level; the API and infrastructure are the fully docum
 | [OWNER_ACCEPTANCE_TEST.md](docs/OWNER_ACCEPTANCE_TEST.md) | Step-by-step checklist the owner runs to accept the project |
 | [DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md) | A ~2–3 minute demo/video walkthrough script |
 | [BOUNTY_SUBMISSION_CHECKLIST.md](docs/BOUNTY_SUBMISSION_CHECKLIST.md) | Everything needed to submit |
-| [KNOWN_LIMITATIONS.md](docs/KNOWN_LIMITATIONS.md) | Honest list of what is demo-only or owner-blocked |
+| [KNOWN_LIMITATIONS.md](docs/KNOWN_LIMITATIONS.md) | Honest list of what is demo-only, owner-run, or a genuine constraint (incl. per-endpoint rate limiting) |
 | [IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md) | The living architecture + phase plan |
 | [PROGRESS.md](docs/PROGRESS.md) | Build progress tracker with evidence |
 

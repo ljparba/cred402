@@ -107,8 +107,8 @@ export function UploadDropzone({
         </motion.div>
 
         {selected ? (
-          <div>
-            <p className="text-lg font-semibold text-ink">{selected.name}</p>
+          <div className="min-w-0 max-w-full">
+            <p className="break-words text-lg font-semibold text-ink">{selected.name}</p>
             <p className="text-sm text-ink-dim">{formatBytes(selected.size)} · ready to scan</p>
           </div>
         ) : (

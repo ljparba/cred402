@@ -9,8 +9,12 @@
  *   Verify          → the `/` scan state (via onVerifyClick on the homepage, or
  *                     a `/?verify=1` link from any other route)
  *
- * Sticky, glassy, condenses on scroll. On mobile it collapses the links into an
- * accessible slide-down drawer. Keeps the "Built on Hedera Testnet" pill.
+ * Sticky, glassy, condenses on scroll. Three responsive tiers (refinement §4):
+ *   - < 1024px  → mobile: logo + compact verify icon + slide-down drawer.
+ *   - 1024–1535 → compact laptop: tighter gaps, compact Verify pill, the network
+ *                 badge shortened to "Hedera Testnet", the redundant circular
+ *                 Hedera icon hidden.
+ *   - 1536px+   → full desktop: comfortable spacing, "Built on Hedera Testnet".
  */
 "use client";
 
@@ -30,9 +34,13 @@ const LINKS = [
   { label: "Samples", href: "/#samples" },
 ] as const;
 
-/** Shared class for the desktop "Verify a Certificate" pill (Link or button). */
+/**
+ * Shared class for the "Verify a Certificate" pill (Link or button). Shown only
+ * at laptop widths and up (lg+); below that the compact circular icon + drawer
+ * cover verify. Compact padding at laptop, comfortable at full desktop (2xl).
+ */
 const VERIFY_PILL =
-  "hidden items-center gap-1.5 rounded-full border border-brand/50 bg-[color:rgba(0,180,255,0.08)] px-3.5 py-1.5 text-xs font-semibold text-brand-ink transition-colors hover:border-brand hover:bg-[color:rgba(0,180,255,0.14)] sm:inline-flex";
+  "hidden items-center gap-1.5 rounded-full border border-brand/50 bg-[color:rgba(0,180,255,0.08)] px-3 py-1.5 text-xs font-semibold text-brand-ink transition-colors hover:border-brand hover:bg-[color:rgba(0,180,255,0.14)] lg:inline-flex 2xl:px-3.5";
 
 export function Nav({
   onVerifyClick,
@@ -89,7 +97,7 @@ export function Nav({
           : "border-b border-transparent",
       )}
     >
-      <nav className="mx-auto flex h-16 max-w-[1440px] items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
+      <nav className="mx-auto flex h-16 max-w-[1440px] items-center justify-between gap-2 px-4 sm:px-6 lg:px-8 2xl:gap-3">
         {/* Real route link to `/` (never a scroll anchor). On the homepage the
             optional onLogoClick also resets the in-page flow to the landing view
             and scrolls to the top, so the logo "goes home" from any flow stage. */}
@@ -105,8 +113,8 @@ export function Nav({
           <Logo />
         </Link>
 
-        {/* Desktop links */}
-        <div className="hidden items-center gap-7 md:flex">
+        {/* Desktop links — laptop (lg) and up; compact gaps at laptop, wider at 2xl */}
+        <div className="hidden items-center gap-4 lg:flex xl:gap-6 2xl:gap-7">
           {LINKS.map((l) => (
             <Link
               key={l.href}
@@ -126,7 +134,7 @@ export function Nav({
           </a>
         </div>
 
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-2 2xl:gap-3">
           {/* Verify affordance — text button on desktop, always reachable */}
           {verifyHref ? (
             <Link href={verifyHref} className={VERIFY_PILL}>
@@ -138,19 +146,20 @@ export function Nav({
             </button>
           )}
 
-          <span className="hidden items-center gap-2 rounded-full border border-border bg-[color:rgba(0,180,255,0.06)] px-3 py-1.5 text-xs font-medium text-brand-ink lg:inline-flex">
+          <span className="hidden items-center gap-2 whitespace-nowrap rounded-full border border-border bg-[color:rgba(0,180,255,0.06)] px-3 py-1.5 text-xs font-medium text-brand-ink lg:inline-flex">
             <span className="relative flex h-2 w-2">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-ok opacity-70" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-ok" />
             </span>
-            Built on Hedera Testnet
+            {/* Compact at laptop, full at desktop */}
+            <span className="hidden 2xl:inline">Built on </span>Hedera Testnet
           </span>
 
           {verifyHref ? (
             <Link
               href={verifyHref}
               aria-label="Cred402 — verify a certificate"
-              className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-border bg-[color:rgba(13,23,48,0.6)] transition-colors hover:border-brand/50"
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-border bg-[color:rgba(13,23,48,0.6)] transition-colors hover:border-brand/50 lg:hidden 2xl:grid"
             >
               <HexBadge size={20} />
             </Link>
@@ -158,7 +167,7 @@ export function Nav({
             <button
               onClick={handleVerify}
               aria-label="Cred402 — verify a certificate"
-              className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-border bg-[color:rgba(13,23,48,0.6)] transition-colors hover:border-brand/50"
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-border bg-[color:rgba(13,23,48,0.6)] transition-colors hover:border-brand/50 lg:hidden 2xl:grid"
             >
               <HexBadge size={20} />
             </button>
@@ -170,7 +179,7 @@ export function Nav({
             aria-label={open ? "Close menu" : "Open menu"}
             aria-expanded={open}
             aria-controls="mobile-nav"
-            className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-border bg-[color:rgba(13,23,48,0.6)] text-ink-dim transition-colors hover:border-brand/50 hover:text-ink md:hidden"
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-border bg-[color:rgba(13,23,48,0.6)] text-ink-dim transition-colors hover:border-brand/50 hover:text-ink lg:hidden"
           >
             {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
@@ -186,7 +195,7 @@ export function Nav({
             animate={{ opacity: 1, height: "auto" }}
             exit={reduce ? { opacity: 0 } : { opacity: 0, height: 0 }}
             transition={{ duration: 0.25 }}
-            className="overflow-hidden border-t border-border bg-[color:rgba(5,7,14,0.96)] backdrop-blur-xl md:hidden"
+            className="overflow-hidden border-t border-border bg-[color:rgba(5,7,14,0.96)] backdrop-blur-xl lg:hidden"
           >
             <div className="mx-auto flex max-w-[1440px] flex-col gap-1 px-4 py-4 sm:px-6">
               {verifyHref ? (

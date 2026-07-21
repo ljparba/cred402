@@ -178,23 +178,38 @@ them in a desktop browser, then repeat the mobile ones with devtools device emul
 - [ ] The nav **How it Works** link opens the real `/how-it-works` route.
 - [ ] In any flow stage, **Back to home** appears near the **top** (not only at the bottom).
 
-### C2. Homepage
+### C2. Homepage & Sample cards
 
 - [ ] The hero **right side shows Live Activity** (recent HCS/payment/verification items with HashScan
       links) — the old repeated HCS/x402/tamper "proof cards" panel is gone.
 - [ ] Desktop: **How It Works (left) and Sample Certificates (right)** in roughly a **35 / 65** split.
 - [ ] The **Original vs. Tampered — Create Tamper Demo** section is present, with a CTA that opens
       `/how-it-works#tamper-demo`, and a concise synthetic-data disclaimer.
-- [ ] Sample cards: no clipped titles, no overlapping buttons; **Use this sample** and **Download**
-      both still work.
+- [ ] **Sample grid columns:** **1 column** on mobile (< 768px), **2 columns** on tablet/laptop
+      (768–1535px), **3 columns only at 1536px+**.
+- [ ] **Sample card layout:** preview → **status badge on its own row above the title (left-aligned,
+      not inline)** → title (up to 3 lines, not clipped) → description → actions at the bottom.
+- [ ] The primary button shows the **full “Use this sample”** label (never `Use t…`); the Download
+      button is the same height and aligned; both still work.
 
-### C3. Upload / Scan page
+### C3. Compact laptop header
 
-- [ ] Right column order is **Sample Files → Scan Process → Issuer Hints**.
-- [ ] There is **no “View All”** control; **all** samples are listed in the Sample Files panel,
-      scrolling **vertically inside the panel** (never sideways), each row readable and selectable.
+- [ ] At **1024–1535px**: header is one clean line — tighter gaps, a compact **Verify a Certificate**
+      pill, the network badge reads **“Hedera Testnet”**, and the redundant far-right circular Hedera
+      icon is **hidden**. No wrapping, no overlap.
+- [ ] At **1536px+**: full desktop header with comfortable spacing and **“Built on Hedera Testnet”**.
+- [ ] **Below 1024px**: the mobile menu/drawer is used (no desktop controls squeezed onto one line).
+- [ ] Keyboard navigation works and focus rings are visible at every width; the logo still links to `/`.
 
-### C4. Final report
+### C4. Upload / Ready-to-Scan (mobile)
+
+- [ ] Order: page title → upload box → certificate preview → **Begin Scan** → Sample Files →
+      Scan Process → Issuer Hints. One column; no side-by-side panels.
+- [ ] Upload box and preview are **full-width** (preview never exceeds the viewport / clipped).
+- [ ] **Begin Scan is full-width** and easy to tap; sidebar sections are in normal flow (no nested
+      scroll trap); no horizontal scroll.
+
+### C5. Final report
 
 - [ ] There is **no “Reference Samples”** box.
 - [ ] Top row reads **Credential · Verdict · Payment Proof**; below it, **Verification Checks** sit
@@ -202,13 +217,35 @@ them in a desktop browser, then repeat the mobile ones with devtools device emul
 - [ ] Long values (hashes, tx/request/topic ids, filenames, consensus timestamps) stay contained —
       they wrap/truncate with copy buttons and HashScan links intact; no horizontal overflow.
 
-### C5. Mobile (test at 320 / 360 / 390 / 430 px, plus 768 px)
+### C6. Post-payment Verification Progress (mobile)
 
-- [ ] **No page-level horizontal scrollbar** on any page; nothing is wider than the viewport.
-- [ ] Homepage stacks in order: hero content → scanner → Live Activity → stats → How It Works →
-      Samples → Tamper Demo → footer; one full-width section per row.
-- [ ] **Scan progress scrolls freely up and down while scanning** — the live logs no longer yank the
-      page down; the page is not locked/sticky/full-screen. Only the log box scrolls internally.
+- [ ] Order: title/status → certificate preview → verification checks → overall progress → Live
+      System Logs → Proof & Trace. One section per row; every check full-width.
+- [ ] **The page scrolls freely up and down while verifying** — the live logs never drag the page;
+      only the log box scrolls internally. No fixed/sticky/full-screen trap, no body scroll-lock.
+- [ ] Hashes and long values wrap/ellipsize; the progress bar stays inside the viewport; Proof & Trace
+      is visible below the logs. Reduced-motion still honoured.
+
+### C7. Rate limits & live on-chain verification
+
+- [ ] **Tamper Demo** (when `TAMPER_DEMO_ENABLED=true`): more than **3 registrations from one IP
+      within an hour** is rejected with a 429 + retry-after.
+- [ ] You acknowledge that **general `/api/verify` has no global rate limit** (documented in
+      [KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md)); add edge limits before public/production use.
+- [ ] **Live HCS/x402 owner verification is recorded:** you have run Part B (or equivalent) and
+      observed a real HCS topic/messages, a completed x402 HBAR settlement, Mirror confirmation, and
+      HashScan proof.
+
+### C8. Global responsive sweep
+
+Check **no horizontal scrollbar / no clipped card / no overlapping badge or title** at each width:
+
+```text
+320 / 360 / 390 / 430 / 768 / 1024 / 1280 / 1366 / 1440 / 1536 / large desktop
+```
+
+- [ ] Homepage mobile order: hero content → scanner → Live Activity → stats → How It Works → Samples
+      → Tamper Demo → footer (one full-width section per row).
 - [ ] Buttons and tap targets are comfortable; text wraps safely; focus states remain visible.
 
 ---
@@ -216,8 +253,10 @@ them in a desktop browser, then repeat the mobile ones with devtools device emul
 ## Acceptance sign-off
 
 - [ ] Part A passes end-to-end (unconfigured demo is convincing and honest).
-- [ ] Part B passes end-to-end (a real testnet settlement releases the report; replay is rejected).
-- [ ] Part C passes — layout, navigation, and mobile responsiveness at 320/360/390/430/768/desktop.
+- [ ] Part B passes end-to-end (a real testnet settlement releases the report; replay is rejected) —
+      recorded as the owner-verified live HCS/x402 acceptance.
+- [ ] Part C passes — layout, navigation, sample cards, compact laptop header, both mobile fixes, and
+      no horizontal overflow at 320/360/390/430/768/1024/1280/1366/1440/1536/large-desktop.
 - [ ] Production checks pass: `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`
       (see [TESTING.md](TESTING.md)).
 - [ ] The [Known Limitations](KNOWN_LIMITATIONS.md) match your understanding — nothing is hidden.

@@ -118,11 +118,13 @@ the decoded `PAYMENT-REQUIRED` header contains an `accepts` entry like this:
 > 2. **A configured challenge with a real `payTo` — requires `X402_PAYMENT_RECIPIENT`.** With a
 >    recipient set, the advertised `payTo` is your real account (above it is a placeholder). This is
 >    still just the *challenge*, not a payment.
-> 3. **An actual, completed on-chain settlement — NOT executed in this build.** Settling needs the
->    operator + demo-payer keys and authorization to spend testnet HBAR; it is an owner acceptance
->    step (see [HEDERA_SETUP.md](HEDERA_SETUP.md) and
->    [OWNER_ACCEPTANCE_TEST.md](OWNER_ACCEPTANCE_TEST.md)). The full code path exists and typechecks
->    but has not been run against live Hedera.
+> 3. **An actual, completed on-chain settlement — owner-verified on Hedera Testnet.** Settling needs
+>    the operator + demo-payer keys and authorization to spend valueless testnet HBAR, so it is an
+>    owner-run acceptance step (see [HEDERA_SETUP.md](HEDERA_SETUP.md) and
+>    [OWNER_ACCEPTANCE_TEST.md](OWNER_ACCEPTANCE_TEST.md)). During owner acceptance, a real
+>    fee-sponsored HBAR settlement completed, was independently confirmed on the Mirror Node
+>    (SUCCESS + exact-amount credit to the recipient), and HashScan proof was observed. Automated
+>    tests still run on the offline path and never spend HBAR.
 
 ### Unconfigured 402 (no recipient set)
 

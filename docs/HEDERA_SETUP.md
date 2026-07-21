@@ -4,9 +4,10 @@
 > the HCS topic, anchor the credential events, create the x402 demo-payer wallet, and verify
 > everything on HashScan and the Mirror Node.
 
-Everything here is **owner-blocked** by design — it needs your Hedera keys. Cred402 runs fine
-without any of it (see [LOCAL_SETUP.md](LOCAL_SETUP.md)); this doc turns on the real on-chain
-behaviour. Testnet HBAR has **no monetary value**.
+Everything here is **owner-run** by design — it needs your Hedera keys. These steps were completed
+during owner acceptance (a real topic + messages, a completed x402 settlement, Mirror + HashScan
+proof). Cred402 also runs fine without any of it (see [LOCAL_SETUP.md](LOCAL_SETUP.md)); this doc
+turns on the real on-chain behaviour. Testnet HBAR has **no monetary value**.
 
 All environment variables go in a `.env.local` file at the repo root (gitignored). Start from
 `.env.example`. **Never commit real secrets.**

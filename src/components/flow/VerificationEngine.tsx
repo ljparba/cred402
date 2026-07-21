@@ -201,7 +201,7 @@ export function VerificationEngine({
 
           <GlassPanel className="p-5">
             <SectionLabel>Proof &amp; Trace</SectionLabel>
-            <div className="mt-4 grid grid-cols-2 gap-3">
+            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="rounded-lg border border-border bg-[color:rgba(5,9,18,0.6)] p-3">
                 <p className="text-[0.65rem] font-semibold uppercase tracking-wider text-ink-faint">HCS Evidence</p>
                 <p className="mt-1 truncate font-mono text-xs text-brand-ink">

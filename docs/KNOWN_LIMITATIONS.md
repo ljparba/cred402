@@ -1,6 +1,6 @@
 # Cred402 — Known Limitations
 
-> An honest, complete list of what is demo-only, owner-blocked, or a genuine constraint of the
+> An honest, complete list of what is demo-only, owner-run, or a genuine constraint of the
 > underlying infrastructure. Nothing here is hidden; several items are disclosed directly in the UI
 > and API responses.
 
@@ -9,19 +9,26 @@ Related: [X402_FLOW.md](X402_FLOW.md) §5 (security model), [HEDERA_SETUP.md](HE
 
 ---
 
-## 1. Live settlement is owner-blocked (no keys shipped)
+## 1. Live HCS anchoring and x402 settlement were owner-verified on Hedera Testnet
 
-The full x402 settlement path (build → 402 → sign → facilitator verify + settle → independent Mirror
-proof → report release) is **implemented and typechecks**, but it was **NOT executed against a live
-transaction during the build**, because that requires the owner's Hedera keys and authorization to
-spend testnet HBAR (IMPLEMENTATION_PLAN §6).
+**Live HCS anchoring and real x402 settlement were owner-verified on Hedera Testnet.** During owner
+acceptance testing:
 
-- What *has* been proven without keys: a **genuine HTTP 402** with a **real `feePayer`** injected
-  live by the public x402.org facilitator; the replay/verify/settle/proof code paths; and rejection
-  behaviour (404/400/402/409).
-- What needs the owner to demonstrate: an actual on-chain settlement. One command chain does it —
-  see [HEDERA_SETUP.md](HEDERA_SETUP.md). Until then, treat the settlement as "code-complete,
-  awaiting a live run."
+- A real HCS topic was created and real issuance/revocation messages were submitted.
+- A real, fee-sponsored **x402 HBAR settlement completed** on Hedera Testnet.
+- **Independent Mirror Node verification succeeded** — a `SUCCESS` result with an exact-amount credit
+  to the configured recipient.
+- **HashScan proof was observed** for the settled transaction and the HCS messages.
+
+These were **owner-run acceptance actions**: they require the owner's Hedera keys and authorization to
+spend valueless testnet HBAR (see [HEDERA_SETUP.md](HEDERA_SETUP.md) and
+[OWNER_ACCEPTANCE_TEST.md](OWNER_ACCEPTANCE_TEST.md) Part B). The app still runs fully in
+**unconfigured mode** without keys — a genuine 402 challenge plus a clearly-labelled *simulated*
+report — so a reviewer needs no keys to see the flow.
+
+**Scope:** this remains a **Hedera Testnet proof of concept**. Mainnet production readiness (real
+value, production key management, third-party audit, SLAs) is **outside the current scope**. No
+private keys or sensitive transaction details are recorded in these docs.
 
 ## 2. The `?demo=1` report bypass (unconfigured mode only)
 
@@ -92,8 +99,14 @@ marketing pages. Verification is deterministic and synthetic by design.
 
 ## 9. Other honest notes
 
-- **No rate limiting** is enabled by default. For a public deployment, add Render/edge rate limiting
-  if abuse is a concern (uploads are already size/type-restricted and never persisted).
+- **Rate limiting is per-endpoint, not global:**
+  - **Tamper Demo** (`POST /api/demo/register`) uses a **DB-backed rate limit** when enabled —
+    default **3 registrations per IP per hour** (the IP is SHA-256-hashed before storage).
+  - **General certificate verification** (`POST /api/verify`) currently has **no global rate
+    limit**. Uploads are size/type-restricted (magic-byte sniffed) and never persisted, but for a
+    public/production deployment you should add edge/server rate limiting, request-body + timeout
+    limits, and per-IP/client quotas. The Tamper Demo limit does **not** protect the general
+    verification endpoint.
 - **HCS evidence check is WARN before anchoring.** In unconfigured mode, the `hcs_evidence` check
   reports WARN ("local offline fixture") rather than PASS; it becomes PASS only after
   `npm run hedera:anchor` writes real `hcs_records`.
@@ -108,3 +121,10 @@ marketing pages. Verification is deterministic and synthetic by design.
 - **PGlite is single-writer.** The DB-backed unit tests isolate to their own dirs (so they pass even
   with `next dev` running), but `npm run verify:samples` uses the app's own PGlite dir — stop the dev
   server or point it at an isolated `PGLITE_DATA_DIR` (see [TESTING.md](TESTING.md)).
+- **Config env-var names (not values) appear in the client bundle.** Client components import
+  `publicConfig` from the same `src/lib/config.ts` that reads server env vars, so the server env-var
+  *names* (e.g. `HEDERA_OPERATOR_PRIVATE_KEY`) end up as string literals in a client chunk. **No
+  secret values are exposed** — Next.js inlines only `NEXT_PUBLIC_*`, so a browser
+  `process.env[name]` is `undefined`, and the names are already public in `.env.example`. Recommended
+  hardening (not yet applied): move `publicConfig` into its own module so the server-config file never
+  reaches the browser bundle.

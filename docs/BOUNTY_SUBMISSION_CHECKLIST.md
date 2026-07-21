@@ -12,7 +12,7 @@ Related: [OWNER_ACCEPTANCE_TEST.md](OWNER_ACCEPTANCE_TEST.md), [DEMO_SCRIPT.md](
 
 - [ ] `npm run lint` passes
 - [ ] `npm run typecheck` passes
-- [ ] `npm test` — **29 tests pass**
+- [ ] `npm test` — **58 tests pass**
 - [ ] `npm run verify:samples` — all 7 samples classify correctly
 - [ ] `npm run build` succeeds
 - [ ] `npm run start` boots the production build
@@ -91,13 +91,15 @@ Complete [HEDERA_SETUP.md](HEDERA_SETUP.md), then record the evidence below:
 
 ---
 
-## Owner-blocked items (summary)
+## Owner-run items (summary)
 
-These are the only things the autonomous build could not do for you (IMPLEMENTATION_PLAN §6):
+These are the only things the autonomous build could not do for you (IMPLEMENTATION_PLAN §6). Items
+1–3 have since been **completed during owner acceptance** — live HCS anchoring and a real x402 HBAR
+settlement were verified on Hedera Testnet (Mirror-confirmed, HashScan proof):
 
-1. Provide the Hedera Testnet **operator** account id + private key (portal.hedera.com).
-2. Create the **demo-payer** account (one command once #1 exists: `npm run hedera:create-wallet`).
-3. Authorize spending testnet HBAR (valueless).
-4. Perform **Render + GitHub** deploy/push actions.
+1. Provide the Hedera Testnet **operator** account id + private key (portal.hedera.com). ✅ done
+2. Create the **demo-payer** account (`npm run hedera:create-wallet`). ✅ done
+3. Authorize spending testnet HBAR (valueless), and run the live settlement. ✅ verified
+4. Perform **Render + GitHub** deploy/push actions. — still owner-run
 
 Everything else — code, schema, migrations, samples, tests, docs — is done.

@@ -72,7 +72,7 @@ export function SystemLog({ lines, live }: { lines: LogLine[]; live: boolean }) 
             >
               <span className="shrink-0 text-ink-faint">{l.time}</span>
               <span className={`shrink-0 ${LEVEL_COLOR[l.level]}`}>[{l.level}]</span>
-              <span className="truncate text-ink-dim">{l.text}</span>
+              <span className="min-w-0 truncate text-ink-dim">{l.text}</span>
               {l.tail && <span className="ml-auto shrink-0 text-brand-ink">{l.tail}</span>}
             </motion.div>
           ))}
