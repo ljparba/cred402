@@ -247,18 +247,23 @@ accepting it.
 
 ---
 
-## 6. Owner-blocking requirements
+## 6. Owner requirements (original owner-only actions — with completion status)
 
-Only these genuinely require the owner. Everything else proceeds autonomously.
+These were the actions that genuinely required the owner (everything else proceeded autonomously).
+Items 1–3 **were completed during Hedera Testnet acceptance** — live HCS anchoring and a real x402
+HBAR settlement were owner-verified (Mirror-confirmed, HashScan proof). Item 4 (public deployment)
+remains an owner action. The "why it originally required the owner" rationale is preserved for history.
 
-| # | Requirement | Why it blocks | Workaround while waiting |
+| # | Requirement | Why it originally required the owner | Status |
 |---|---|---|---|
-| 1 | Hedera Testnet **operator** account ID + private key (from portal.hedera.com) | Cannot create the HCS topic, submit real events, or receive payment without it. Keys are secrets and must never be invented. | Build the full path; run in **unconfigured mode** with clearly-labelled offline fixtures until keys arrive. |
-| 2 | Hedera Testnet **demo payer** account (second account, funded) | Payer and recipient must be distinct accounts for a valid transfer. | `scripts/create-demo-wallet.ts` derives and funds it from the operator once #1 exists — so this is *not* a separate ask. |
-| 3 | Authorization to spend testnet HBAR | Settlement is a real (valueless testnet) transaction; the brief forbids irreversible external actions without consent. | Testnet HBAR has no monetary value; will confirm before first live settlement. |
-| 4 | Render + GitHub account actions (deploy, push) | Explicitly out of scope without authorization. | Full deployment docs prepared; owner executes. |
+| 1 | Hedera Testnet **operator** account ID + private key (from portal.hedera.com) | Cannot create the HCS topic, submit real events, or receive payment without it. Keys are secrets and must never be invented. | ✅ Completed during acceptance (keys configured; topic + messages created). |
+| 2 | Hedera Testnet **demo payer** account (second account, funded) | Payer and recipient must be distinct accounts for a valid transfer. | ✅ Completed (`scripts/create-demo-wallet.ts` derives/funds it from the operator). |
+| 3 | Authorization to spend testnet HBAR | Settlement is a real (valueless testnet) transaction; the brief forbids irreversible external actions without consent. | ✅ Authorized during acceptance; a real testnet-HBAR settlement completed (owner-verified, Mirror + HashScan). |
+| 4 | Render + GitHub account actions (deploy, push) | Explicitly out of scope without authorization. | ⏳ Remaining owner action (deployment docs prepared; owner executes). |
 
-No other decisions will be escalated.
+Remaining owner-controlled external actions are now only: public GitHub push, Render
+configuration/deployment, production environment secrets, demo-video recording/upload, and the final
+bounty submission.
 
 ---
 
@@ -326,10 +331,11 @@ storage, safe-metadata logging only, clean typed errors (403 disabled / 403 not-
 `TAMPER_DEMO_RATE_LIMIT_WINDOW_SECONDS=3600`, `NEXT_PUBLIC_GITHUB_URL`.
 
 ### 8.7 Testing + safety
-Because the deployment is now **configured** (live testnet keys), all automated tests run on the
-**offline/deterministic** path and never call `POST /api/pay` or `POST /api/demo/register` live. The
-live HCS anchor + x402 settlement remain **owner acceptance steps**. Responsive checks are
-deterministic layout assertions + an owner browser checklist (no headless browser installed).
+All automated tests run on the **offline/deterministic** path and never call `POST /api/pay` or
+`POST /api/demo/register` live (they never spend HBAR). The live HCS anchor + x402 settlement were
+**owner-verified on Hedera Testnet** during acceptance (real topic/messages, a completed HBAR
+settlement, Mirror confirmation, HashScan proof). Responsive checks are deterministic layout
+assertions + an owner browser checklist (no headless browser installed), all owner-checked and passed.
 
 ## 9. Final frontend layout & mobile refinement (supersedes §8.2)
 
@@ -473,7 +479,8 @@ Hedera Testnet** (real topic/messages, completed HBAR settlement, Mirror confirm
 proof — owner-run acceptance; mainnet out of scope; no secrets/tx details recorded). Rate-limiting is
 documented per-endpoint (Tamper Demo DB limit vs no global limit on general verification) across
 KNOWN_LIMITATIONS / PROGRESS / this plan. Stale "owner-blocked / not executed" wording corrected in
-README, PROGRESS, HEDERA_SETUP, X402_FLOW; test counts updated to **58**; sample-grid breakpoints and
+README, PROGRESS, HEDERA_SETUP, X402_FLOW; test counts kept current (now **86** total / **52**
+frontend-layout guards); sample-grid breakpoints and
 bundle sizes refreshed; OWNER_ACCEPTANCE_TEST Part C extended.
 
 ### 10.7 Payment / 402 page mobile
@@ -536,3 +543,14 @@ through result:
 No fixed-pixel/`min-w-[…]` widths remain in the Tamper Demo tree (only the page container
 `max-w-[1440px]`); no `position: fixed` / `100vh` / `h-screen` / sticky / body-lock; reduced-motion,
 keyboard, and focus states preserved. All registration/anchoring/verification behavior is unchanged.
+
+### 10.10 DB test lifecycle — natural exit
+`getDbBundle()` memoises one DB bundle on `globalThis`; PGlite (embedded WASM Postgres) keeps an open
+handle while alive, so the DB-backed test files (`engine.test.ts`, `demo.test.ts`) printed their
+summary but the `node --test` process never exited. Fix (test/lib only — no runtime behavior change):
+`closeDb()` in `src/lib/db/index.ts` disposes the cached connection (PGlite `.close()` or postgres.js
+`.end()`) and clears the singleton in a `finally`; `tests/lib/db-teardown.ts` exposes
+`registerDbTeardown()`, which both DB-backed files call to install a file-level `after()` hook. Node
+runs `after()` even when a test or `before()` setup fails, so the handle is always released and each
+file — and `npm test` — **returns to the prompt naturally**. No forced `process.exit`; only the
+isolated test DBs are touched (the main `./.pglite` is preserved). See `TESTING.md`.

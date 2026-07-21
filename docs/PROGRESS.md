@@ -122,16 +122,22 @@ actions). Automated tests still run on the offline/deterministic path (they neve
 
 ## Active tasks
 
-- None — implementation is complete; awaiting owner-configured Hedera acceptance testing.
+- None — implementation and responsive owner acceptance are complete. Remaining work is
+  owner-controlled and external: Phase 2 repository-readiness/security audit, Phase 3 production
+  verification, Phase 4 deployment + submission (public GitHub push, Render deploy, test the deployed
+  site, record/upload the demo video, submit the bounty).
 
 ## Blocked tasks
 
-- None currently. (Owner-blocking items — Hedera keys — do not block until Phase 2 live submission; see plan §6. App runs in **unconfigured mode** with offline fixtures until keys arrive.)
+- None. Hedera keys were configured and **live HCS anchoring + real x402 settlement were owner-verified
+  on Hedera Testnet** (Mirror-confirmed, HashScan proof; see plan §6). The app also still runs in
+  **unconfigured mode** with clearly-labelled offline fixtures for keyless review.
 
 ## Test status
 
 - `npm test` → **86/86 pass** (hash 5, config 4, upload 7, hedera 6, engine/6-states 7, demo 5, frontend-layout 52). `verify:samples` → 7/7 correct verdicts. `typecheck`, `lint`, `next build` all clean (`/` 186 kB, `/how-it-works` 185 kB First Load JS).
 - Note: `verify:samples` and the DB-backed unit tests use PGlite (single-writer). The unit suite isolates its dirs even with `next dev` running; `verify:samples` still needs the dev server stopped or an isolated `PGLITE_DATA_DIR` (see `TESTING.md`).
+- DB lifecycle: `getDbBundle()` memoises the active bundle and `closeDb()` (`src/lib/db/index.ts`) disposes the cached PGlite/postgres.js connection. `engine.test.ts` and `demo.test.ts` register a file-level `after()` teardown (`tests/lib/db-teardown.ts` → `registerDbTeardown()`) that calls `closeDb()`, so PGlite handles close and both files (and `npm test`) **return to the prompt naturally** — no forced `process.exit`. Isolated test DBs only; the main `.pglite` is never touched.
 
 ## Known issues
 
@@ -145,20 +151,31 @@ actions). Automated tests still run on the offline/deterministic path (they neve
 
 ## Next autonomous action
 
-None required — the build is complete and handoff-ready. Optional follow-ups: a QA agent could extend the suite with live x402 integration tests once keys exist; add rate limiting before any public (non-testnet) use.
+None required — implementation is complete and owner-accepted. Optional future follow-ups (Phase 2/3):
+extend the suite with live x402 integration tests; add edge/server rate limiting on `/api/verify`
+before any public/production (non-testnet) use.
 
 ## Owner-required actions
 
-See `docs/OWNER_ACCEPTANCE_TEST.md` and `docs/HEDERA_SETUP.md`. Only these need the owner (plan §6):
-1. Create a Hedera Testnet operator account at portal.hedera.com → set `HEDERA_OPERATOR_ID` / `HEDERA_OPERATOR_PRIVATE_KEY`.
-2. `npm run hedera:create-topic` → set `HEDERA_HCS_TOPIC_ID`; `npm run hedera:anchor`; `npm run hedera:create-wallet` → set `X402_DEMO_PAYER_*`; set `X402_PAYMENT_RECIPIENT`.
-3. Authorize spending (valueless) testnet HBAR for the first live settlement.
-4. Deploy to Render + push to GitHub (`docs/RENDER_DEPLOYMENT.md`).
+Items 1–3 **were completed during Hedera Testnet acceptance** (keys configured; topic + messages
+created; a real x402 HBAR settlement completed and was Mirror-confirmed with HashScan proof — see
+`docs/OWNER_ACCEPTANCE_TEST.md` and `docs/HEDERA_SETUP.md`). The remaining owner-controlled actions are
+deployment + submission:
+
+1. ✅ Hedera Testnet operator account + `HEDERA_OPERATOR_ID` / `HEDERA_OPERATOR_PRIVATE_KEY` configured.
+2. ✅ `hedera:create-topic` / `hedera:anchor` / `hedera:create-wallet` run; `HEDERA_HCS_TOPIC_ID`,
+   `X402_DEMO_PAYER_*`, and `X402_PAYMENT_RECIPIENT` set.
+3. ✅ Testnet-HBAR spend authorized; the first live settlement completed (owner-verified).
+4. ⏳ Push the public GitHub repository.
+5. ⏳ Configure + deploy on Render (`docs/RENDER_DEPLOYMENT.md`) and test the deployed site.
+6. ⏳ Record/upload the demo video and submit the bounty.
 
 ## Final readiness status
 
-`HANDOFF-READY` — everything runs end-to-end. In unconfigured mode a reviewer gets a real 402
-challenge + a clearly-labelled simulated report with no keys; with the owner's testnet keys, **live
-HCS anchoring and real x402 settlement have been owner-verified on Hedera Testnet** (Mirror-confirmed,
-HashScan proof). Remaining before final sign-off: the owner browser/visual checklist
-(`OWNER_ACCEPTANCE_TEST.md` Part C). Scope stays a Hedera Testnet proof of concept.
+`HANDOFF-READY` — everything runs end-to-end and the responsive/mobile owner acceptance is complete.
+In unconfigured mode a reviewer gets a real 402 challenge + a clearly-labelled simulated report with
+no keys; with the owner's testnet keys, **live HCS anchoring and real x402 settlement have been
+owner-verified on Hedera Testnet** (Mirror-confirmed, HashScan proof). Remaining before submission:
+Phase 2 repository readiness, Phase 3 production verification, and Phase 4 deployment/submission —
+public GitHub push, Render deploy + deployed-site test, demo video, and bounty submission. Scope stays
+a Hedera Testnet proof of concept.

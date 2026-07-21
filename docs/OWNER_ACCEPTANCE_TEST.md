@@ -11,6 +11,33 @@ Related: [LOCAL_SETUP.md](LOCAL_SETUP.md), [X402_FLOW.md](X402_FLOW.md), [TESTIN
 
 ---
 
+## Owner verification status (recorded)
+
+The checklists below stay unchecked so the owner can re-run them any time (they are a reusable
+acceptance script). The **actual owner-verified state as of this handoff** is:
+
+- ✅ **Part A — unconfigured demo**: passed (genuine 402, honest *simulated* report, all **7** sample
+  verdicts correct).
+- ✅ **Part C — responsive / mobile acceptance**: owner-checked and **passed** at every width, across
+  the homepage, sample cards, compact laptop header, Upload / Ready-to-Scan, post-payment Verification
+  Progress, Payment / 402, footer + bottom status bar, the complete Create Tamper Demo mobile flow, and
+  the global no-horizontal-scroll sweep.
+- ✅ **Part B — live on-chain (core)**: **live HCS anchoring and a real x402 HBAR settlement were
+  owner-verified on Hedera Testnet** — real topic + messages observed, settlement completed,
+  independent Mirror Node confirmation succeeded, and HashScan proof was observed. (No private keys or
+  sensitive transaction values are recorded here.)
+- ✅ **Automated gates**: `npm test` **86/86** (frontend-layout **52** structural guards), with the
+  DB-backed suites now closing PGlite and returning to the prompt naturally; `verify:samples` **7/7**;
+  typecheck, lint, and the production build all pass.
+- ⏳ **Part B — replay rejection (B6) and idempotent re-access (B7)**: exercise the settlement path but
+  are **not separately recorded as run** here — the owner should tick them only after running them.
+
+Remaining owner-controlled actions: public GitHub push, Render configuration/deploy + deployed-site
+test, production secrets, demo-video recording/upload, and the final bounty submission. Mainnet
+production readiness is outside this Hedera Testnet proof-of-concept scope.
+
+---
+
 ## Part A — Unconfigured mode (no keys required)
 
 ### A0. Install and prepare
@@ -294,13 +321,15 @@ Check **no horizontal scrollbar / no clipped card / no overlapping badge or titl
 
 ## Acceptance sign-off
 
-- [ ] Part A passes end-to-end (unconfigured demo is convincing and honest).
-- [ ] Part B passes end-to-end (a real testnet settlement releases the report; replay is rejected) —
-      recorded as the owner-verified live HCS/x402 acceptance.
-- [ ] Part C passes — layout, navigation, sample cards, compact laptop header, both mobile fixes, and
-      no horizontal overflow at 320/360/390/430/768/1024/1280/1366/1440/1536/large-desktop.
-- [ ] Production checks pass: `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`
-      (see [TESTING.md](TESTING.md)).
+- [x] Part A passes end-to-end (unconfigured demo is convincing and honest). — owner-verified
+- [x] Part B core passes — a real testnet settlement releases the report (owner-verified live HCS/x402
+      acceptance: Mirror-confirmed, HashScan proof). Still to tick after running: B6 replay-rejection
+      and B7 idempotent re-access.
+- [x] Part C passes — layout, navigation, sample cards, compact laptop header, both mobile fixes, the
+      Tamper Demo mobile flow, and no horizontal overflow at
+      320/360/390/425/430/768/1024/1280/1366/1440/1536/large-desktop. — owner-verified
+- [x] Production checks pass: `npm run lint`, `npm run typecheck`, `npm test` (**86/86**), `npm run build`
+      (see [TESTING.md](TESTING.md)). — verified
 - [ ] The [Known Limitations](KNOWN_LIMITATIONS.md) match your understanding — nothing is hidden.
 
 If all boxes are ticked, the project is accepted.

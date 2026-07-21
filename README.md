@@ -75,6 +75,12 @@ acceptance actions that require Hedera Testnet keys; see
 [OWNER_ACCEPTANCE_TEST.md](docs/OWNER_ACCEPTANCE_TEST.md) and
 [HEDERA_SETUP.md](docs/HEDERA_SETUP.md)). This remains a Hedera Testnet proof of concept.
 
+Automated gates are green — `npm test` **86/86** (incl. 52 structural frontend guards; DB-backed
+suites close PGlite and exit naturally), `npm run verify:samples` **7/7**, plus typecheck, lint, and a
+clean production build — and the responsive/mobile owner acceptance is complete. Remaining
+owner-controlled work is deployment + submission: push the public GitHub repo, configure/deploy on
+Render and test the deployed site, record the demo video, and submit the bounty.
+
 ---
 
 ## Quickstart (local, zero external services)

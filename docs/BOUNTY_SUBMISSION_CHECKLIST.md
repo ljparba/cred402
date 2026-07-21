@@ -10,12 +10,12 @@ Related: [OWNER_ACCEPTANCE_TEST.md](OWNER_ACCEPTANCE_TEST.md), [DEMO_SCRIPT.md](
 
 ## 1. Code quality gates (all must pass)
 
-- [ ] `npm run lint` passes
-- [ ] `npm run typecheck` passes
-- [ ] `npm test` — **86 tests pass**
-- [ ] `npm run verify:samples` — all 7 samples classify correctly
-- [ ] `npm run build` succeeds
-- [ ] `npm run start` boots the production build
+- [x] `npm run lint` passes — verified
+- [x] `npm run typecheck` passes — verified
+- [x] `npm test` — **86/86 tests pass** (52 frontend guards; DB suites exit naturally) — verified
+- [x] `npm run verify:samples` — all **7/7** samples classify correctly — verified
+- [x] `npm run build` succeeds — verified
+- [ ] `npm run start` boots the production build — *owner (production smoke test, not yet run here)*
 
 ## 2. Repository
 
@@ -30,19 +30,23 @@ Related: [OWNER_ACCEPTANCE_TEST.md](OWNER_ACCEPTANCE_TEST.md), [DEMO_SCRIPT.md](
 
 ## 3. The core requirements are demonstrably met
 
-- [ ] Upload → hash → identify works (PDF/PNG/JPEG)
-- [ ] All six credential states classify correctly: **VALID, TAMPERED, EXPIRED, REVOKED,
-      UNREGISTERED_ISSUER, UNKNOWN**
-- [ ] The **original-vs-tampered pair** produces divergent SHA-256 and a clear TAMPERED verdict with
-      a hash diff
-- [ ] The protected report returns a **genuine HTTP 402** before payment
-- [ ] The full report **cannot** be fetched for free (free preview leaks no verdict/checks)
-- [ ] HCS is used as a tamper-evident event log (issuance/revocation envelopes; no PDFs/PII on-chain)
-- [ ] Downloadable samples available from the main page
+- [x] Upload → hash → identify works (PDF/PNG/JPEG) — verified (upload + engine tests)
+- [x] All six credential states classify correctly: **VALID, TAMPERED, EXPIRED, REVOKED,
+      UNREGISTERED_ISSUER, UNKNOWN** — verified (`verify:samples` 7/7 + engine test)
+- [x] The **original-vs-tampered pair** produces divergent SHA-256 and a clear TAMPERED verdict with
+      a hash diff — verified
+- [x] The protected report returns a **genuine HTTP 402** before payment — verified
+- [x] The full report **cannot** be fetched for free (free preview leaks no verdict/checks) — verified
+- [x] HCS is used as a tamper-evident event log (issuance/revocation envelopes; no PDFs/PII on-chain) — verified
+- [x] Downloadable samples available from the main page — verified
 
-## 4. Real Hedera + x402 proof **(owner — needs keys)**
+## 4. Real Hedera + x402 proof **(owner)**
 
-Complete [HEDERA_SETUP.md](HEDERA_SETUP.md), then record the evidence below:
+**Live HCS anchoring and a real x402 HBAR settlement were owner-verified on Hedera Testnet** during
+acceptance (real topic + messages, settlement completed, Mirror-confirmed, HashScan proof observed).
+The boxes below stay open only to **record the exact public evidence values** in the submission — fill
+them from your own safe records; **never invent IDs and never include private keys**. Replay rejection
+(last box) stays open unless you have actually run it.
 
 - [ ] Testnet **operator account id** (public, no private key): `0.0.__________`
 - [ ] **HCS topic id**: `0.0.__________` — HashScan: `https://hashscan.io/testnet/topic/0.0.____`
