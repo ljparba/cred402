@@ -27,14 +27,14 @@ Related: [OWNER_ACCEPTANCE_TEST.md](OWNER_ACCEPTANCE_TEST.md), [DEMO_SCRIPT.md](
 - [x] `.env.local` and secrets are **not** committed — verified in the Phase 2 audit (no `.env`/
       `.env.local` tracked or in history; `.env*` gitignored except `.env.example`; no key material in
       tracked files or the client bundle).
-- [ ] `README.md` present with: product overview, the differentiator, the tamper demo, quickstart,
-      the two modes, doc links, and the testnet disclaimer
-- [ ] All 13 docs present under `docs/` (see the table in the README)
-- [ ] `.env.example` present and complete
-- [ ] **Decide whether to publish the development-record prompt files** — `docs/prompts/` and
-      `CLAUDE_PROJECT_PROMPT.md` are part of the build history (no secrets), but are not product docs.
-      Keep them if you want the record public, otherwise move/remove before the public push. *(Phase 2
-      recommendation — non-blocking; not deleted without owner intent.)*
+- [x] `README.md` present + verified factual — product overview, differentiator, tamper demo,
+      quickstart, the two modes, API endpoints, sample/verdict tables, doc links, testnet disclaimer;
+      every claim traceable to code/tests/config/owner-verified records (README audit).
+- [x] All 13 docs present under `docs/` (see the table in the README) — verified.
+- [x] `.env.example` present and complete (placeholders only) — verified.
+- [x] **Development-record prompt files removed from the public repo** — `docs/prompts/` and
+      `CLAUDE_PROJECT_PROMPT.md` deleted from the current tracked tree per the owner's decision (no
+      in-repo backup; Git history not rewritten). *(Decision resolved.)*
 
 ## 3. The core requirements are demonstrably met
 

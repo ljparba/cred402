@@ -9,6 +9,19 @@
 
 ## Current phase
 
+**Factual README audit + public-repo package — `COMPLETE (docs)` (2026-07-21):** rewrote `README.md`
+so every important claim is traceable to current code, tests, config, routes, samples, or the
+owner-verified records (no marketing claims: no "production-ready/enterprise/trustless/audited/AI",
+no "complete replay proof" while B6 is unrun). Added the missing sections — all 9 API endpoints, the
+full 7-sample verdict table, all 6 verdicts, the x402 v2 header names, an in-code security/privacy
+section, an architecture diagram, and a "public Hedera evidence — to be added" section (no invented
+IDs/URLs; live app / video / evidence marked pending). **Removed the development-record prompt files
+from the tracked tree** per the owner's decision — `CLAUDE_PROJECT_PROMPT.md` and all of
+`docs/prompts/` (no in-repo backup; Git history not rewritten). Reconciled the bounty checklist
+(README/docs/`.env.example`/prompt-decision boxes ticked). The public repository package is prepared;
+remaining owner work is the public GitHub push, Render deployment + deployed-site verification, adding
+the public evidence links, the demo video, and the bounty submission.
+
 **Tamper Demo mobile full-width fix — `COMPLETE (implementation)` (2026-07-21):** the final mobile
 pass, limited to the **Create Tamper Demo** flow inside `/how-it-works`. Root cause: the step
 containers used `grid gap-6 lg:grid-cols-2`, which on mobile is a single **`auto`-sized** implicit
