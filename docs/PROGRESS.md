@@ -46,7 +46,9 @@ grids default to `grid-cols-1` (3-col only at `xl`); every wrapper/card/motion.d
 `w-full min-w-0 max-w-full` (cards `overflow-hidden`); the certificate preview media is
 `w-full min-w-0 max-w-full` capped only from `sm`; hashes/labels wrap (`break-all`/`break-words`); the
 log panel is contained and scrolls only its own container. No behavior change. `frontend-layout` tests
-extended to **33** guards (**67** total). Details: `IMPLEMENTATION_PLAN.md` §10.3–§10.4.
+extended to **33** guards at that step (a point-in-time snapshot — the suite has since grown to the
+current **52** frontend-layout guards / **86** total; see the Test-suite row below). Details:
+`IMPLEMENTATION_PLAN.md` §10.3–§10.4.
 
 **Final frontend, responsive, security & docs closeout — `COMPLETE (implementation)` (2026-07-21):**
 Sample Certificate cards redesigned (preview → status badge on its own row above the title → title →
@@ -59,7 +61,8 @@ per row, `min-w-0`, safe wrapping, freely scrollable — no fixed/`100vh`/body-l
 **security review** confirmed the secrets / upload / Tamper Demo / x402 / HCS / error-handling
 controls are intact (no code changes required). Docs corrected (live HCS/x402 owner-verified, rate-limit
 distinction, breakpoints, bundle sizes, test counts). Details: `IMPLEMENTATION_PLAN.md` §10.
-Remaining: owner browser visual checks (`OWNER_ACCEPTANCE_TEST.md` Part C).
+The responsive/mobile owner acceptance (`OWNER_ACCEPTANCE_TEST.md` Part C) has since been
+**owner-checked and passed** — see the "Owner verification status" section in that document.
 
 **Final frontend layout & mobile refinement — `COMPLETE` (2026-07-21):** a layout/usability pass
 (no feature rewrite). Header logo is a real `/` route link that also resets the in-page flow; the

@@ -21,12 +21,17 @@ Related: [OWNER_ACCEPTANCE_TEST.md](OWNER_ACCEPTANCE_TEST.md), [DEMO_SCRIPT.md](
 
 - [ ] **(owner)** Repo is **public** on GitHub
 - [x] `LICENSE` file present (MIT — matches the README badge/section)
-- [ ] `.env.local` and secrets are **not** committed (verify `git log`/`git status`; `.env*` is
-      gitignored except `.env.example`)
+- [x] `.env.local` and secrets are **not** committed — verified in the Phase 2 audit (no `.env`/
+      `.env.local` tracked or in history; `.env*` gitignored except `.env.example`; no key material in
+      tracked files or the client bundle).
 - [ ] `README.md` present with: product overview, the differentiator, the tamper demo, quickstart,
       the two modes, doc links, and the testnet disclaimer
 - [ ] All 13 docs present under `docs/` (see the table in the README)
 - [ ] `.env.example` present and complete
+- [ ] **Decide whether to publish the development-record prompt files** — `docs/prompts/` and
+      `CLAUDE_PROJECT_PROMPT.md` are part of the build history (no secrets), but are not product docs.
+      Keep them if you want the record public, otherwise move/remove before the public push. *(Phase 2
+      recommendation — non-blocking; not deleted without owner intent.)*
 
 ## 3. The core requirements are demonstrably met
 
@@ -44,17 +49,29 @@ Related: [OWNER_ACCEPTANCE_TEST.md](OWNER_ACCEPTANCE_TEST.md), [DEMO_SCRIPT.md](
 
 **Live HCS anchoring and a real x402 HBAR settlement were owner-verified on Hedera Testnet** during
 acceptance (real topic + messages, settlement completed, Mirror-confirmed, HashScan proof observed).
-The boxes below stay open only to **record the exact public evidence values** in the submission — fill
-them from your own safe records; **never invent IDs and never include private keys**. Replay rejection
-(last box) stays open unless you have actually run it.
+The **actions** are complete; what remains is to **record the exact public evidence values** in the
+submission text — fill them from your own safe records; **never invent IDs and never include private
+keys**.
+
+**Actions completed (owner-verified during acceptance):**
+
+- [x] `npm run hedera:anchor` run; `hcs_records` populated (HCS issuance/revocation messages on the topic).
+- [x] At least one **real x402 settlement** performed (`npm run agent:demo` in configured mode).
+- [x] Independent **Mirror Node** confirmation succeeded (`SUCCESS` + exact **0.1 tHBAR** credit to the recipient).
+- [x] **HashScan proof observed** for the settlement transaction and the HCS messages.
+
+**Public evidence values to record in the submission (owner fills — do not invent):**
 
 - [ ] Testnet **operator account id** (public, no private key): `0.0.__________`
 - [ ] **HCS topic id**: `0.0.__________` — HashScan: `https://hashscan.io/testnet/topic/0.0.____`
-- [ ] `npm run hedera:anchor` run; `hcs_records` populated; sample HCS **sequence numbers** recorded
-- [ ] At least one **real x402 settlement** performed (`npm run agent:demo` in configured mode)
-- [ ] Sample settlement **transaction id(s)** (dashed form) recorded, e.g. `0.0.____-____-____`
-- [ ] HashScan link to that transfer shows **SUCCESS**, **0.1 tHBAR**, payer → recipient
-- [ ] Replay rejection verified (409 `PAYMENT_ALREADY_CONSUMED`)
+- [ ] Sample HCS **sequence numbers**: `__________`
+- [ ] Settlement **transaction id(s)** (dashed form): `0.0.____-____-____`
+- [ ] HashScan **transfer link** (shows SUCCESS, 0.1 tHBAR, payer → recipient): `https://hashscan.io/testnet/transaction/__________`
+
+**Still to run (keep open until actually performed):**
+
+- [ ] Replay rejection verified (409 `PAYMENT_ALREADY_CONSUMED`) — Owner Acceptance Test **B6**.
+- [ ] Idempotent paid re-access returns the same report with no second charge — Owner Acceptance Test **B7**.
 
 > Record these values in your submission text. **Never include private keys.**
 
