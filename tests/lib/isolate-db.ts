@@ -14,6 +14,6 @@
  * Importing this module FIRST sets the isolated dir before `.env` is read, so the
  * loader's "existing values win" rule keeps our value. An explicit
  * `PGLITE_DATA_DIR` from the shell (e.g. CI) still overrides, and a real
- * `DATABASE_URL` is untouched. See docs/TESTING.md.
+ * `DATABASE_URL` is untouched.
  */
 process.env.PGLITE_DATA_DIR ||= "./.pglite-test";

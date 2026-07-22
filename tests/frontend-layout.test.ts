@@ -1,6 +1,5 @@
 /**
- * Frontend layout & navigation guards (refinement prompts §15 / final
- * security-docs prompt §10).
+ * Frontend layout & navigation guards.
  *
  * This project has no browser/DOM/E2E test runner wired up (the suite is Node's
  * built-in runner + tsx, backend-focused). Rather than pull in jsdom + a React
@@ -9,8 +8,8 @@
  * in place (and the removed things stay removed), so a future edit that silently
  * regresses one of them fails CI. They intentionally match on stable, meaningful
  * tokens (route hrefs, prop names, ordering of section labels, breakpoints) — not
- * brittle whitespace. The human-eye responsive checks are tracked in
- * docs/OWNER_ACCEPTANCE_TEST.md.
+ * brittle whitespace. The human-eye responsive/visual checks are a manual,
+ * owner-run pass, not part of this automated suite.
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";

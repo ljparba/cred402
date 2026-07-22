@@ -27,7 +27,6 @@ payments use valueless testnet HBAR. It is not a production identity or credenti
 | Live app URL | Coming after deployment |
 | Demo video | To be added before submission |
 | Public Hedera evidence (topic / transaction / HashScan) | To be added before submission — see [Public Hedera evidence](#public-hedera-evidence) |
-| Documentation | In [`docs/`](docs/) — see [Documentation](#documentation) |
 
 Automated gates are green: `npm test` **86/86** (incl. **52** structural frontend guards; the
 DB-backed suites close PGlite and exit naturally), `npm run verify:samples` **7/7**, plus `lint`,
@@ -117,7 +116,8 @@ Cred402 uses **genuine x402 v2** with the real header names:
 The Hedera exact scheme is a **partially-signed transaction with facilitator fee sponsorship**, not an
 EVM-style signed authorization. Its resource-bound nonce provides **challenge freshness/TTL only**;
 replay protection comes from single-use transaction IDs, the DB-unique settlement record, and the
-independent Mirror Node check. See [X402_FLOW.md](docs/X402_FLOW.md).
+independent Mirror Node check. The 402 challenge, header formats, and settlement flow are implemented
+in `src/lib/x402/` and `src/app/api/report/[requestId]/route.ts`.
 
 ## Security & privacy
 
@@ -164,7 +164,8 @@ Independent Mirror Node confirmation (SUCCESS + exact amount + recipient) + sing
 Deterministic report (six checks → one verdict) + HCS evidence + HashScan links
 ```
 
-More detail: [ARCHITECTURE.md](docs/ARCHITECTURE.md).
+The implementation lives under `src/lib/` (`config`, `db`, `hedera`, `x402`, `verify`) and
+`src/app/api/`.
 
 ## Tech stack
 
@@ -214,7 +215,12 @@ to build or run in unconfigured mode.
   and any real `DATABASE_URL`. Account IDs and the HCS topic ID are public identifiers, not secrets.
 - `.env*` is gitignored except `.env.example`; **never commit `.env.local`**.
 
-Configured-mode setup (operator account, HCS topic, demo wallet): [HEDERA_SETUP.md](docs/HEDERA_SETUP.md).
+For **configured Hedera Testnet mode**: create a testnet operator account at
+[portal.hedera.com](https://portal.hedera.com) and set `HEDERA_OPERATOR_ID` / `HEDERA_OPERATOR_PRIVATE_KEY`;
+then run `npm run hedera:create-topic` (sets `HEDERA_HCS_TOPIC_ID`), `npm run hedera:anchor` (writes the
+issuance/revocation events), and `npm run hedera:create-wallet` (creates the demo payer → `X402_DEMO_PAYER_*`),
+and set `X402_PAYMENT_RECIPIENT`. These scripts perform live testnet writes and are owner-run. All
+variables and their comments are in [`.env.example`](.env.example).
 
 ## Scripts
 
@@ -277,7 +283,7 @@ Seven synthetic sample certificates ship with the app (source: `scripts/data/cat
 - **B6 (replay rejection) and B7 (idempotent re-access)** manual acceptance checks are **not yet
   recorded as run**.
 
-Details: [TESTING.md](docs/TESTING.md).
+The suite lives under `tests/` and runs with `npm test` (Node's built-in runner via `tsx`).
 
 ## Public Hedera evidence
 
@@ -300,23 +306,6 @@ transaction IDs.
 - **Mainnet readiness and a formal third-party audit are out of scope** for this testnet proof of
   concept.
 - **B6 / B7 acceptance checks are not yet recorded as run.**
-
-Full list: [KNOWN_LIMITATIONS.md](docs/KNOWN_LIMITATIONS.md).
-
-## Documentation
-
-| Doc | Covers |
-|---|---|
-| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | Module map, data flow, engine, HCS design, x402 flow, DB portability, the two modes |
-| [LOCAL_SETUP.md](docs/LOCAL_SETUP.md) | Clone → running locally with zero external services (and optionally Neon) |
-| [HEDERA_SETUP.md](docs/HEDERA_SETUP.md) | Testnet operator account, HCS topic, anchoring events, demo wallet, Mirror/HashScan verification |
-| [X402_FLOW.md](docs/X402_FLOW.md) | The genuine 402 sequence, header formats, security model, `npm run agent:demo` |
-| [DATABASE.md](docs/DATABASE.md) | Tables, the `DATABASE_URL` abstraction, PGlite ↔ postgres.js portability, migrate/seed/reset |
-| [TESTING.md](docs/TESTING.md) | Running the suite, what each file covers, the isolated test DBs, production checks |
-| [KNOWN_LIMITATIONS.md](docs/KNOWN_LIMITATIONS.md) | Honest constraints (incl. per-endpoint rate limiting) |
-| [RENDER_DEPLOYMENT.md](docs/RENDER_DEPLOYMENT.md) | Render web service + PostgreSQL, env vars, build/start commands |
-| [DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md) | A short demo/video walkthrough script |
-| [OWNER_ACCEPTANCE_TEST.md](docs/OWNER_ACCEPTANCE_TEST.md) | The owner's step-by-step acceptance checklist |
 
 ## License & disclaimer
 
