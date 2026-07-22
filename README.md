@@ -20,22 +20,22 @@ payments use valueless testnet HBAR. It is not a production identity or credenti
 
 ---
 
-## Status & links
+## Live app & links
 
-| Item | Status |
+| | |
 |---|---|
-| Live app URL | Coming after deployment |
-| Demo video | To be added before submission |
-| Public Hedera evidence (topic / transaction / HashScan) | To be added before submission — see [Public Hedera evidence](#public-hedera-evidence) |
+| **Live app** | https://cred402-yxwk.onrender.com |
+| **Source** | https://github.com/ljparba/cred402 |
+| **HCS topic (HashScan)** | https://hashscan.io/testnet/topic/0.0.9651085 |
+| **Settlement transaction (HashScan)** | https://hashscan.io/testnet/transaction/0.0.9185802-1784718257-721825634 |
+| **Demo video** | _Pending_ |
 
 Automated gates are green: `npm test` **86/86** (incl. **52** structural frontend guards; the
 DB-backed suites close PGlite and exit naturally), `npm run verify:samples` **7/7**, plus `lint`,
-`typecheck`, a production build, and a local production smoke test — all passing. **Live HCS anchoring
-and a real x402 HBAR settlement were owner-verified on Hedera Testnet, including independent Mirror
-Node confirmation and observed HashScan proof.** The B6 replay-rejection and B7 idempotent-re-access
-manual acceptance checks are **not yet recorded as run**. Remaining owner work is public GitHub push,
-Render deployment + deployed-site verification, adding the public evidence links, the demo video, and
-the bounty submission.
+`typecheck`, a production build, and a local production smoke test — all passing. The full flow is
+**verified live on Hedera Testnet**: a real x402 v2 HBAR settlement with independent Mirror Node
+confirmation and HCS evidence, plus **B6 replay-rejection (PASS)** and **B7 idempotent-re-access
+(PASS)**. See [Live Hedera Testnet evidence](#live-hedera-testnet-evidence).
 
 ---
 
@@ -279,17 +279,34 @@ Seven synthetic sample certificates ship with the app (source: `scripts/data/cat
 - `lint`, `typecheck`, and the **production build** pass; a **local production smoke test**
   (`npm run start`) passed the route/API matrix (200s, genuine 402, safe typed errors, no verdict/
   secret leaks).
-- **Live Hedera settlement was owner-verified separately** on Hedera Testnet (see Status & links).
-- **B6 (replay rejection) and B7 (idempotent re-access)** manual acceptance checks are **not yet
-  recorded as run**.
+- **The full flow is verified live on Hedera Testnet** — a real x402 HBAR settlement with independent
+  Mirror Node confirmation and HCS evidence (see [Live Hedera Testnet evidence](#live-hedera-testnet-evidence)).
+- **B6 (replay rejection) and B7 (idempotent re-access)** acceptance checks **passed live** — details in
+  [Live Hedera Testnet evidence](#live-hedera-testnet-evidence).
 
 The suite lives under `tests/` and runs with `npm test` (Node's built-in runner via `tsx`).
 
-## Public Hedera evidence
+## Live Hedera Testnet evidence
 
-Public evidence links (HCS topic, sample sequence numbers, settlement transaction, and HashScan
-links) **will be added before final submission**. This README does not include placeholder account or
-transaction IDs.
+Verified on **Hedera Testnet** using **x402 v2** and the native HBAR asset `0.0.0` at a price of
+**10,000,000 tinybars (0.1 HBAR)**. Independent **Mirror Node verification: true**; **HCS evidence: PASS**.
+
+| Item | Value |
+|---|---|
+| Live app | https://cred402-yxwk.onrender.com |
+| HCS topic | `0.0.9651085` — [HashScan](https://hashscan.io/testnet/topic/0.0.9651085) |
+| HCS sequence | `25` |
+| HCS transaction | `0.0.9594641-1784715422-016438799` — [HashScan](https://hashscan.io/testnet/transaction/0.0.9594641-1784715422-016438799) |
+| Settlement transaction | `0.0.9185802-1784718257-721825634` — [HashScan](https://hashscan.io/testnet/transaction/0.0.9185802-1784718257-721825634) |
+
+### Replay & re-access verification
+
+- **Replay rejection (B6): PASS** — reusing the exact settled payment against a different, unpaid
+  request returned **HTTP 409 `PAYMENT_ALREADY_CONSUMED`**; no report was released, no second
+  settlement occurred, and the second request stayed locked.
+- **Idempotent re-access (B7): PASS** — reopening the paid request without another payment returned
+  **HTTP 200**, `paid: true`, the **same transaction ID**, and the same `TAMPERED` report — no second
+  charge.
 
 ## Known limitations
 
@@ -305,7 +322,6 @@ transaction IDs.
   resource; replay protection is layered (single-use tx id + DB uniqueness + Mirror verification).
 - **Mainnet readiness and a formal third-party audit are out of scope** for this testnet proof of
   concept.
-- **B6 / B7 acceptance checks are not yet recorded as run.**
 
 ## License & disclaimer
 
