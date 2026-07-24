@@ -2,15 +2,24 @@
  * HTTP 402 payment screen (mockup 3). Renders the GENUINE 402 challenge from
  * GET /api/report/{id}: price, payTo, live feePayer, request id, and the raw
  * server response (status + PAYMENT-REQUIRED header). Center shows the
- * wallet→API→Hedera particle flow and a 4-step settlement rail. Two actions:
- * "Pay with x402" and "Use Demo Wallet" (both call POST /api/pay; the parent
- * falls back to ?demo=1 on unconfigured deployments).
+ * wallet→API→Hedera particle flow and a 4-step settlement rail.
+ *
+ * ONE payment action: "Use Demo Wallet", which calls POST /api/pay (the built-in
+ * server-side testnet payer; the parent falls back to ?demo=1 on unconfigured
+ * deployments). This used to be rendered as two buttons — "Pay with x402" and
+ * "Use Demo Wallet" — wired to the same `onPay` handler, which implied a choice
+ * of payment methods that does not exist. Agents settle the same 402 themselves
+ * via the API; the link under the button points at that flow.
+ *
+ * The strip under the actions states implemented properties only: no promise
+ * about settlement speed, and no blanket "decentralized/immutable" claim.
  *
  * The real 402 details stay visible at all times so the protocol is demonstrated
  * even when settlement is simulated.
  */
 "use client";
 
+import Link from "next/link";
 import { motion } from "framer-motion";
 import {
   CheckCircle2,
@@ -19,7 +28,7 @@ import {
   ChevronRight,
   Boxes,
   ShieldCheck,
-  Zap,
+  Radar,
   Loader2,
   ArrowLeft,
 } from "lucide-react";
@@ -214,31 +223,44 @@ export function Payment402({
             Pay-per-use access. No account required.
           </p>
 
-          {/* actions — stacked + full-width on mobile, 2-up from sm */}
-          <div className="grid w-full min-w-0 max-w-full gap-3 sm:grid-cols-2">
-            <Button size="lg" className="w-full min-w-0" onClick={onPay} disabled={busy}>
+          {/* action — ONE payment path (the built-in server-side demo wallet) */}
+          <div className="flex w-full min-w-0 max-w-full flex-col items-center gap-2">
+            <Button
+              size="lg"
+              className="w-full min-w-0 whitespace-normal text-center"
+              onClick={onPay}
+              disabled={busy}
+            >
               {busy ? (
                 <>
                   <Loader2 className="h-5 w-5 shrink-0 animate-spin" /> Settling…
                 </>
               ) : (
                 <>
-                  <HexBadge size={22} glow={false} className="shrink-0" /> Pay with x402 · {price} tHBAR
+                  <Cred402Mark className="h-5 w-5 shrink-0" /> Use Demo Wallet · {price} tHBAR
                 </>
               )}
             </Button>
-            <Button size="lg" variant="outline" className="w-full min-w-0" onClick={onPay} disabled={busy}>
-              <Cred402Mark className="h-5 w-5 shrink-0" /> Use Demo Wallet
-            </Button>
+            <p className="break-words text-center text-xs text-ink-faint">
+              Testnet demo wallet — the server-side payer settles this 402 for you. No wallet
+              connect, no account.
+            </p>
+            <Link
+              href="/how-it-works#x402-flow"
+              className="break-words text-center text-xs text-brand-2 hover:underline"
+            >
+              Building an agent? See the x402 API flow
+            </Link>
           </div>
 
-          {/* feature strip — 2 cols on mobile, 4 from sm */}
+          {/* feature strip — 2 cols on mobile, 4 from sm. Implemented properties
+              only: no settlement-time promise, no blanket decentralisation claim. */}
           <div className="grid w-full min-w-0 max-w-full grid-cols-2 gap-3 border-t border-border pt-5 sm:grid-cols-4">
             {[
-              { icon: Boxes, t: "HCS Proof", s: "Delivered" },
-              { icon: HexBadge, t: "Decentralized", s: "Immutable", hex: true },
+              { icon: Boxes, t: "HCS Record", s: "Tamper-evident" },
+              { icon: HexBadge, t: "Public Evidence", s: "Hedera Testnet", hex: true },
               { icon: ShieldCheck, t: "Tamper Check", s: "Deterministic" },
-              { icon: Zap, t: "Fast Settlement", s: "~2-5 seconds" },
+              { icon: Radar, t: "Mirror Verified", s: "Independent confirmation" },
             ].map((f) => (
               <div key={f.t} className="flex min-w-0 max-w-full items-center gap-2">
                 {f.hex ? (

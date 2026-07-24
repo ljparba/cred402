@@ -342,9 +342,11 @@ test("wallet/API/Hedera diagram is a shrink-safe 3-col grid with min-w-0 nodes",
   assert.match(paymentFlow, /h-14 w-14[\s\S]*?sm:h-20 sm:w-20/);
 });
 
-test("payment buttons are full-width on mobile and keep their full labels", () => {
-  assert.match(payment, /className="w-full min-w-0"[\s\S]*?Pay with x402/);
-  assert.match(payment, /className="w-full min-w-0"[\s\S]*?Use Demo Wallet/);
+test("the payment button is full-width on mobile and keeps its full label", () => {
+  // One action now (see tests/ui-truthfulness.test.ts for why the duplicate
+  // "Pay with x402" button was removed) — still full-width and never truncated.
+  assert.match(payment, /className="w-full min-w-0 whitespace-normal text-center"/);
+  assert.match(payment, /Use Demo Wallet · \{price\} tHBAR/);
 });
 
 test("transaction preview rows stack on mobile (label above value)", () => {

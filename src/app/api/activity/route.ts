@@ -5,6 +5,18 @@
  * Merges recent HCS event records, settled x402 payments, and verification
  * requests into one reverse-chronological feed, each with a HashScan deep link
  * where applicable.
+ *
+ * `stats` carries only real counts from this deployment's database — no sample,
+ * seeded-for-show, or growth figures. Field names say exactly what is counted so
+ * the UI can label them truthfully:
+ *
+ *  - `registeredCredentials`  rows in `credentials` (registered, not necessarily anchored)
+ *  - `verificationRequests`   rows in `verification_requests`, INCLUDING locked/unpaid ones
+ *  - `hcsRecords` + `hcsSource`  real anchored `hcs_records` when any exist
+ *      (`hcsSource: "network"`); otherwise the local offline event fixtures in
+ *      `credential_events` (`hcsSource: "fixture"`), which the UI must label as
+ *      demo data rather than live network activity
+ *  - `settlements`            successful (SETTLED) x402 settlements
  */
 import { json, safeHandler } from "@/lib/http";
 import { tinybarsToHbar } from "@/lib/config";
@@ -79,11 +91,16 @@ export async function GET() {
 
     items.sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0));
 
+    // Real on-chain records win; with none anchored yet we fall back to the local
+    // event fixtures and SAY SO, so the UI never presents them as network activity.
+    const anchoredOnNetwork = stats.hcsRecords > 0;
+
     return json({
       stats: {
-        certificatesAnchored: stats.credentials,
-        hcsEvents: stats.hcsRecords > 0 ? stats.hcsRecords : stats.credentialEvents,
-        verifications: stats.verifications,
+        registeredCredentials: stats.credentials,
+        verificationRequests: stats.verifications,
+        hcsRecords: anchoredOnNetwork ? stats.hcsRecords : stats.credentialEvents,
+        hcsSource: anchoredOnNetwork ? "network" : "fixture",
         settlements: stats.settlements,
       },
       items: items.slice(0, 12),

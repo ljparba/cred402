@@ -8,11 +8,14 @@
  * {@link LiveActivity} feed so the hero shows something live and non-duplicative.
  * On mobile the three areas stack into one full-width row each (headline →
  * scanner → live activity) rather than being squeezed into a narrow column.
+ *
+ * The scanner's hash/verdict strip is FIXED sample content, so it is labelled
+ * "Illustrative preview" — only the Live Activity column shows real data.
  */
 "use client";
 
 import { motion } from "framer-motion";
-import { ArrowRight, FileText, Boxes, DollarSign, ShieldCheck, CheckCircle2 } from "lucide-react";
+import { ArrowRight, FileText, Boxes, DollarSign, ShieldCheck, CheckCircle2, Info } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { CertScanner } from "@/components/viz/CertScanner";
@@ -98,7 +101,13 @@ export function Hero({
             label="Scanning Certificate"
             footer={
               <div className="mt-4 rounded-xl border border-border bg-[color:rgba(5,9,18,0.7)] p-4">
-                <div className="flex items-center justify-between">
+                {/* This panel is FIXED example content, not a live verification and
+                    not live network data — say so before showing the hash/verdict. */}
+                <span className="inline-flex max-w-full items-center gap-1.5 break-words rounded-full border border-border px-2 py-0.5 text-[0.6rem] font-semibold uppercase tracking-[0.14em] text-ink-faint">
+                  <Info className="h-3 w-3 shrink-0" aria-hidden />
+                  Illustrative preview
+                </span>
+                <div className="mt-3 flex items-center justify-between">
                   <span className="text-[0.65rem] font-semibold uppercase tracking-wider text-ink-faint">
                     SHA-256 Hash
                   </span>
@@ -115,6 +124,10 @@ export function Hero({
                     Valid · Anchored on Hedera
                   </span>
                 </div>
+                <p className="mt-2 break-words text-[0.65rem] leading-snug text-ink-faint">
+                  Sample anchored credential — example content, not the result of a live
+                  verification. Upload a file to run a real one.
+                </p>
               </div>
             }
           />

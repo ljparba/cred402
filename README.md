@@ -30,9 +30,10 @@ payments use valueless testnet HBAR. It is not a production identity or credenti
 | **Settlement transaction (HashScan)** | https://hashscan.io/testnet/transaction/0.0.9185802-1784718257-721825634 |
 | **Demo video** | _Pending_ |
 
-Automated gates are green: `npm test` **86/86** (incl. **52** structural frontend guards; the
-DB-backed suites close PGlite and exit naturally), `npm run verify:samples` **7/7**, plus `lint`,
-`typecheck`, a production build, and a local production smoke test — all passing. The full flow is
+Automated gates are green: `npm test` **101/101** (incl. **52** structural frontend guards and **15**
+UI-truthfulness guards; the DB-backed suites close PGlite and exit naturally),
+`npm run verify:samples` **7/7**, plus `lint`, `typecheck`, a production build, and a local
+production smoke test — all passing. The full flow is
 **verified live on Hedera Testnet**: a real x402 v2 HBAR settlement with independent Mirror Node
 confirmation and HCS evidence, plus **B6 replay-rejection (PASS)** and **B7 idempotent-re-access
 (PASS)**. See [Live Hedera Testnet evidence](#live-hedera-testnet-evidence).
@@ -119,6 +120,39 @@ replay protection comes from single-use transaction IDs, the DB-unique settlemen
 independent Mirror Node check. The 402 challenge, header formats, and settlement flow are implemented
 in `src/lib/x402/` and `src/app/api/report/[requestId]/route.ts`.
 
+## What the public UI shows
+
+The landing page states only what the implementation can back:
+
+- **Headline statistics come from `GET /api/activity`** — real counts from this deployment's own
+  database. There are no growth percentages, no average-verification-time figure, and no sample or
+  placeholder values anywhere in the row.
+
+  | Label | Counted from |
+  |---|---|
+  | **Registered Credentials** | rows in `credentials` (registered — not a claim that each is anchored) |
+  | **Verification Requests** | rows in `verification_requests`, **including locked / unpaid requests** |
+  | **HCS Records** | rows in `hcs_records` once anything has been anchored on Hedera; otherwise the local offline event fixtures (`credential_events`) |
+  | **x402 Settlements** | `payment_settlements` rows with status `SETTLED` (a failed settlement is not counted) |
+
+- **Configured vs. unconfigured** — the endpoint returns `hcsSource: "network" | "fixture"` alongside
+  the count. In unconfigured/offline mode nothing is anchored, so the HCS card shows the local event
+  fixtures and says so (*"Local demo fixtures — not live network records"*). Fixture data is never
+  presented as live network activity.
+- **Loading and failure** — while the request is in flight the row shows `—` / *Loading*; if it fails
+  with no earlier real values, `—` / *Unavailable*. Zeros or fallback numbers are never displayed,
+  and the count-up animation only runs on real values.
+- **One payment action** — the 402 screen offers a single button, **`Use Demo Wallet · <price> tHBAR`**
+  (price from the live 402 challenge), which calls `POST /api/pay`: the built-in **server-side testnet
+  demo wallet**. There is no wallet connect and no second, different payment method — agents settle
+  the same 402 themselves through the API.
+- **No settlement-time promise** — the UI states implemented properties (tamper-evident HCS record,
+  public Hedera Testnet evidence, deterministic tamper check, independent Mirror Node confirmation)
+  instead of an expected number of seconds.
+- **The hero certificate panel is illustrative** — fixed example content labelled *Illustrative
+  preview* / *Sample anchored credential*, not the result of a live verification and not live network
+  statistics. Only the hero's Live Activity feed shows real data.
+
 ## Security & privacy
 
 Confirmed behavior in the current code:
@@ -180,8 +214,9 @@ The implementation lives under `src/lib/` (`config`, `db`, `hedera`, `x402`, `ve
 
 ## Quick start (local, zero external services)
 
-Requires **Node.js 20+**. No Postgres server, Docker, or Hedera account needed — the app uses an
-embedded [PGlite](https://pglite.dev) database and offline fixtures by default.
+Requires **Node.js 20+** (declared as `"engines": { "node": ">=20" }` in `package.json`). No Postgres
+server, Docker, or Hedera account needed — the app uses an embedded [PGlite](https://pglite.dev)
+database and offline fixtures by default.
 
 ```bash
 npm install
@@ -248,7 +283,7 @@ The `hedera:*` scripts and configured `agent:demo` perform **live testnet action
 | `POST /api/pay` | Built-in demo-wallet payer (server-side x402 client) used by the UI to settle a report. |
 | `GET /api/samples` | The synthetic sample-certificate catalogue. |
 | `GET /api/samples/:slug` | Download one sample PDF (path resolved from a trusted catalogue row). |
-| `GET /api/activity` | Recent HCS / payment / verification activity for the live feed. |
+| `GET /api/activity` | Recent HCS / payment / verification activity for the live feed, plus the real counts (and `hcsSource`) behind the headline statistics. |
 | `GET /api/health` | Readiness + configuration diagnostics (booleans and public endpoints only). |
 | `POST /api/demo/register` | Create Tamper Demo: register an original file (gated by a feature flag, testnet-only, DB-backed rate limit; forced demo issuer). |
 | `GET /api/demo/:demoCredentialId` | Look up a demo registration and its proof. |
@@ -272,9 +307,14 @@ Seven synthetic sample certificates ship with the app (source: `scripts/data/cat
 
 ## Testing & verified status
 
-- `npm test` → **86 / 86** passing, with a natural process exit.
+- `npm test` → **101 / 101** passing, with a natural process exit.
 - **52** of those are **frontend structural guards** in `tests/frontend-layout.test.ts` — they read
   component source and assert layout/nav invariants. **They are not DOM or browser end-to-end tests.**
+- **15** are **UI-truthfulness guards** in `tests/ui-truthfulness.test.ts`: 11 read the public UI and
+  README source to keep removed claims removed (no growth percentages, no fixed average verification
+  time, no settlement-speed promise, no blanket decentralization claim, one payment action, the hero
+  sample labelled), and 4 invoke the real `GET /api/activity` handler against an isolated embedded
+  database to prove each displayed statistic maps to actual rows.
 - `npm run verify:samples` → **7 / 7** samples classify to their expected verdict.
 - `lint`, `typecheck`, and the **production build** pass; a **local production smoke test**
   (`npm run start`) passed the route/API matrix (200s, genuine 402, safe typed errors, no verdict/

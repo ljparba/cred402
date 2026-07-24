@@ -54,7 +54,7 @@ export default function Home() {
   const [samplesData, setSamplesData] = useState<SamplesResponse | null>(null);
   const [now, setNow] = useState(() => Date.now());
 
-  const { data: activity } = usePoll<ActivityResponse>(
+  const { data: activity, error: activityError } = usePoll<ActivityResponse>(
     (signal) => api.activity(signal),
     10_000,
     [],
@@ -288,7 +288,8 @@ export default function Home() {
             />
 
             <div className="mx-auto mt-10 max-w-[1440px] px-4 sm:px-6 lg:px-8">
-              <StatCounters stats={activity?.stats ?? null} />
+              {/* Real counts only — an unavailable feed shows "—", never zeros. */}
+              <StatCounters stats={activity?.stats ?? null} error={activityError} />
             </div>
 
             {/* Row — How-It-Works preview (35%, left) + Sample Certificates (65%, right). */}

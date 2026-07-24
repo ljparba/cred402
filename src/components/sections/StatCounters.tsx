@@ -1,12 +1,20 @@
 /**
- * Animated headline stat counters (mockup 1). Values come from /api/activity
- * stats and tally up on mount; a fixed "avg verify time" rounds out the row to
- * match the mockup's four-up layout. Reduced-motion snaps to final values.
+ * Headline stat counters (mockup 1). Every figure comes from GET /api/activity —
+ * real counts from this deployment's database. Nothing here is hardcoded: no
+ * growth deltas, no average-verification-time, no placeholder values.
+ *
+ * Honest states: while the request is in flight (and if it fails) the row shows
+ * an em-dash with "Loading" / "Unavailable" instead of zeros or invented numbers,
+ * and the count-up animation only runs once real values have arrived.
+ *
+ * The HCS card is labelled by its source — anchored Hedera records when the
+ * deployment has any, otherwise the local offline fixtures, explicitly marked as
+ * demo data rather than live network activity. Reduced-motion snaps to finals.
  */
 "use client";
 
 import { motion } from "framer-motion";
-import { FileText, Search, Boxes, Clock } from "lucide-react";
+import { FileText, Search, Boxes, DollarSign } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useCountUp } from "@/components/lib/hooks";
 import { GlassPanel } from "@/components/ui/GlassPanel";
@@ -17,21 +25,21 @@ function StatCard({
   icon: Icon,
   value,
   label,
-  suffix,
-  delta,
+  note,
+  ready,
   index,
-  decimals = 0,
 }: {
   icon: LucideIcon;
   value: number;
   label: string;
-  suffix?: string;
-  delta?: string;
+  /** Small caption under the value: what is counted, or the pending state. */
+  note: string;
+  /** True once real data has arrived — gates both the value and the animation. */
+  ready: boolean;
   index: number;
-  decimals?: number;
 }) {
-  const animated = useCountUp(value);
-  const shown = decimals > 0 ? (animated / 100).toFixed(decimals) : formatCount(animated);
+  const animated = useCountUp(ready ? value : 0);
+  const shown = ready ? formatCount(animated) : "—";
 
   return (
     <motion.div
@@ -40,40 +48,78 @@ function StatCard({
       viewport={{ once: true, margin: "-40px" }}
       transition={{ duration: 0.5, delay: index * 0.08 }}
       className="flex items-center gap-4 px-5 py-5"
+      role="group"
+      aria-label={`${label}: ${ready ? `${formatCount(value)} — ${note}` : note}`}
     >
       <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-border bg-[color:rgba(0,180,255,0.08)]">
-        <Icon className="h-5 w-5 text-brand-2" />
+        <Icon className="h-5 w-5 text-brand-2" aria-hidden />
       </div>
       <div className="min-w-0">
         <div className="text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-ink-faint">
           {label}
         </div>
         <div className="flex items-baseline gap-2">
-          <span className="text-2xl font-bold tabular-nums text-ink">
+          <span className="text-2xl font-bold tabular-nums text-ink" aria-hidden>
             {shown}
-            {suffix}
           </span>
-          {delta && <span className="text-xs font-medium text-ok">↑ {delta}</span>}
         </div>
+        <div className="mt-0.5 break-words text-[0.65rem] leading-snug text-ink-faint">{note}</div>
       </div>
     </motion.div>
   );
 }
 
-export function StatCounters({ stats }: { stats: ActivityStats | null }) {
-  const s = stats ?? {
-    certificatesAnchored: 0,
-    hcsEvents: 0,
-    verifications: 0,
-    settlements: 0,
-  };
+export function StatCounters({
+  stats,
+  error = false,
+}: {
+  stats: ActivityStats | null;
+  /** The activity request failed and no earlier real values are available. */
+  error?: boolean;
+}) {
+  const ready = stats !== null;
+  const pending = error ? "Unavailable" : "Loading";
 
   return (
     <GlassPanel className="grid grid-cols-1 divide-y divide-border sm:grid-cols-2 sm:divide-y-0 lg:grid-cols-4 lg:divide-x">
-      <StatCard icon={FileText} value={s.certificatesAnchored} label="Certificates Anchored" delta="24.6%" index={0} />
-      <StatCard icon={Search} value={s.verifications} label="Verifications" delta="18.3%" index={1} />
-      <StatCard icon={Boxes} value={s.hcsEvents} label="HCS Events" delta="27.8%" index={2} />
-      <StatCard icon={Clock} value={231} decimals={2} suffix="s" label="Avg. Verify Time" index={3} />
+      <StatCard
+        icon={FileText}
+        value={stats?.registeredCredentials ?? 0}
+        label="Registered Credentials"
+        note={ready ? "Credential records" : pending}
+        ready={ready}
+        index={0}
+      />
+      <StatCard
+        icon={Search}
+        value={stats?.verificationRequests ?? 0}
+        label="Verification Requests"
+        note={ready ? "Includes locked, unpaid requests" : pending}
+        ready={ready}
+        index={1}
+      />
+      <StatCard
+        icon={Boxes}
+        value={stats?.hcsRecords ?? 0}
+        label="HCS Records"
+        note={
+          ready
+            ? stats.hcsSource === "network"
+              ? "Anchored on Hedera Testnet"
+              : "Local demo fixtures — not live network records"
+            : pending
+        }
+        ready={ready}
+        index={2}
+      />
+      <StatCard
+        icon={DollarSign}
+        value={stats?.settlements ?? 0}
+        label="x402 Settlements"
+        note={ready ? "Settled testnet payments" : pending}
+        ready={ready}
+        index={3}
+      />
     </GlassPanel>
   );
 }

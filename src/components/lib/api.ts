@@ -38,10 +38,20 @@ export interface HealthResponse {
 }
 
 // ── /api/activity ────────────────────────────────────────────────────────────
+/**
+ * Real counts from the deployment's own database. Every field is what its name
+ * says — the UI labels them literally and never invents deltas or estimates.
+ */
 export interface ActivityStats {
-  certificatesAnchored: number;
-  hcsEvents: number;
-  verifications: number;
+  /** Credential records registered in this deployment. */
+  registeredCredentials: number;
+  /** Verification requests created, including locked / unpaid ones. */
+  verificationRequests: number;
+  /** HCS issuance/revocation records — see `hcsSource` for what they are. */
+  hcsRecords: number;
+  /** `"network"` = anchored on Hedera; `"fixture"` = local offline demo events. */
+  hcsSource: "network" | "fixture";
+  /** Successful (SETTLED) x402 settlements. */
   settlements: number;
 }
 export interface ActivityItem {

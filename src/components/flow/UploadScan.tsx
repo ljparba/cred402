@@ -72,7 +72,7 @@ export function UploadScan({
             Upload your certificate
           </h1>
           <p className="mt-2 max-w-lg text-sm text-ink-dim">
-            We&apos;ll securely hash and prepare it for decentralized verification on Hedera.
+            We&apos;ll hash it in memory and check it against the proof anchored on Hedera.
           </p>
         </div>
         <StepProgress current={stepIndex} className="lg:mb-1" />

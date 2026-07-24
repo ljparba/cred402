@@ -4,7 +4,7 @@
  * Pure reads/writes — business logic (nonces, verdicts, settlement checks)
  * lives in the verify/ and x402/ layers.
  */
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, sql, type SQL } from "drizzle-orm";
 import { getDb, schema } from "./index";
 import type { PgTable } from "drizzle-orm/pg-core";
 import type {
@@ -304,11 +304,28 @@ async function countRows(table: PgTable): Promise<number> {
   return rows[0]?.n ?? 0;
 }
 
+/** Count only the rows matching `where` (e.g. successful settlements). */
+async function countRowsWhere(table: PgTable, where: SQL): Promise<number> {
+  const db = await getDb();
+  const rows = await db.select({ n: sql<number>`count(*)::int` }).from(table).where(where);
+  return rows[0]?.n ?? 0;
+}
+
+/**
+ * Raw counts behind the public statistic row. Each field is exactly what its
+ * name says — the presentation layer decides how to label them (see
+ * `src/app/api/activity/route.ts`), never the other way round.
+ */
 export interface ActivityStats {
+  /** Rows in `credentials` — registered credential records. */
   credentials: number;
+  /** Rows in `credential_events` — the LOCAL mirror of HCS envelopes. */
   credentialEvents: number;
+  /** Rows in `verification_requests` — includes locked / unpaid requests. */
   verifications: number;
+  /** `payment_settlements` rows with status SETTLED — successful settlements only. */
   settlements: number;
+  /** Rows in `hcs_records` — real on-chain proof coordinates only. */
   hcsRecords: number;
 }
 
@@ -317,7 +334,7 @@ export async function getActivityStats(): Promise<ActivityStats> {
     countRows(schema.credentials),
     countRows(schema.credentialEvents),
     countRows(schema.verificationRequests),
-    countRows(schema.paymentSettlements),
+    countRowsWhere(schema.paymentSettlements, eq(schema.paymentSettlements.status, "SETTLED")),
     countRows(schema.hcsRecords),
   ]);
   return { credentials, credentialEvents, verifications, settlements, hcsRecords };
