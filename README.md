@@ -1,3 +1,5 @@
+<img width="1898" height="904" alt="image" src="https://github.com/user-attachments/assets/d5361b60-567c-4081-8735-62292c6b11cc" />
+
 # Cred402
 
 > Accountless, pay-per-use credential verification on Hedera using x402 payments and tamper-evident HCS records.
