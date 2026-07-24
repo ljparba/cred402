@@ -54,9 +54,10 @@ export default function Home() {
   const [samplesData, setSamplesData] = useState<SamplesResponse | null>(null);
   const [now, setNow] = useState(() => Date.now());
 
+  // ~30s cadence (pauses in hidden tabs; the first fetch is still immediate).
   const { data: activity, error: activityError } = usePoll<ActivityResponse>(
     (signal) => api.activity(signal),
-    10_000,
+    30_000,
     [],
   );
 

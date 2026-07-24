@@ -18,7 +18,7 @@
  *      demo data rather than live network activity
  *  - `settlements`            successful (SETTLED) x402 settlements
  */
-import { json, safeHandler } from "@/lib/http";
+import { json, PUBLIC_SHORT_CACHE, safeHandler } from "@/lib/http";
 import { tinybarsToHbar } from "@/lib/config";
 import {
   getActivityStats,
@@ -95,15 +95,22 @@ export async function GET() {
     // event fixtures and SAY SO, so the UI never presents them as network activity.
     const anchoredOnNetwork = stats.hcsRecords > 0;
 
-    return json({
-      stats: {
-        registeredCredentials: stats.credentials,
-        verificationRequests: stats.verifications,
-        hcsRecords: anchoredOnNetwork ? stats.hcsRecords : stats.credentialEvents,
-        hcsSource: anchoredOnNetwork ? "network" : "fixture",
-        settlements: stats.settlements,
+    // This route carries only PUBLIC aggregate/feed data, so it gets a short
+    // shared-cache policy (a CDN can absorb the homepage poll). It is applied
+    // ONLY to this success response — the sanitized generic 500 from safeHandler
+    // is never marked cacheable. Never use this on a private report/payment route.
+    return json(
+      {
+        stats: {
+          registeredCredentials: stats.credentials,
+          verificationRequests: stats.verifications,
+          hcsRecords: anchoredOnNetwork ? stats.hcsRecords : stats.credentialEvents,
+          hcsSource: anchoredOnNetwork ? "network" : "fixture",
+          settlements: stats.settlements,
+        },
+        items: items.slice(0, 12),
       },
-      items: items.slice(0, 12),
-    });
+      { headers: { "Cache-Control": PUBLIC_SHORT_CACHE } },
+    );
   });
 }

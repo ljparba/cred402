@@ -233,6 +233,18 @@ export const serverConfig = {
     return envInt("PAY_RATE_LIMIT_WINDOW_SECONDS", 3600);
   },
 
+  // Retention / cleanup (owner-run `npm run db:cleanup` — never auto-scheduled here)
+  /** Age after which a conclusively-UNPAID, abandoned verification request may be pruned. */
+  get unpaidRequestRetentionDays(): number {
+    requireServer("unpaidRequestRetentionDays");
+    return envInt("UNPAID_REQUEST_RETENTION_DAYS", 30);
+  },
+  /** Grace period, after a rate-limit row's window is no longer active, before it may be pruned. */
+  get rateLimitRetentionDays(): number {
+    requireServer("rateLimitRetentionDays");
+    return envInt("RATE_LIMIT_RETENTION_DAYS", 2);
+  },
+
   // Tamper demo (Create Tamper Demo feature)
   /** True when the network is Hedera testnet — the demo is testnet-only. */
   get isTestnet(): boolean {

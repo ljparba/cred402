@@ -45,7 +45,16 @@ export function useCountUp(value: number, durationMs = 1200): number {
   return display;
 }
 
-/** Polls an async producer on an interval; pauses when the tab is hidden. */
+/**
+ * Polls an async producer on an interval. The FIRST fetch is immediate (the
+ * initial page data is never delayed). Recurring polling PAUSES while the tab is
+ * hidden (`document.visibilityState === "hidden"`) and resumes with a fresh fetch
+ * when the page becomes visible again — no background traffic from a tab nobody
+ * is looking at. Only one request is ever in flight at a time (no overlap).
+ *
+ * On a FAILED poll the last known-good `data` is kept on screen and only `error`
+ * is raised, so a transient blip never replaces real values with nulls/zeros.
+ */
 export function usePoll<T>(
   producer: (signal: AbortSignal) => Promise<T>,
   intervalMs: number,
@@ -56,10 +65,23 @@ export function usePoll<T>(
 
   useEffect(() => {
     let alive = true;
+    let inFlight = false;
     let controller = new AbortController();
-    let timer: ReturnType<typeof setTimeout>;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    const hidden = () =>
+      typeof document !== "undefined" && document.visibilityState === "hidden";
+
+    // Queue the next poll — but never while the tab is backgrounded. The
+    // visibilitychange handler resumes the loop when the page is shown again.
+    const schedule = () => {
+      clearTimeout(timer);
+      if (alive && !hidden()) timer = setTimeout(run, intervalMs);
+    };
 
     const run = async () => {
+      if (!alive || inFlight) return; // one request at a time — never overlap
+      inFlight = true;
       controller = new AbortController();
       try {
         const result = await producer(controller.signal);
@@ -68,19 +90,23 @@ export function usePoll<T>(
           setError(false);
         }
       } catch {
+        // Keep the last known-good `data` visible; only flag the stale state.
         if (alive) setError(true);
+      } finally {
+        inFlight = false;
+        schedule();
       }
-      if (alive) timer = setTimeout(run, intervalMs);
     };
 
     const onVisibility = () => {
-      if (document.visibilityState === "visible") {
-        clearTimeout(timer);
-        run();
+      if (hidden()) {
+        clearTimeout(timer); // pause the recurring loop in a hidden tab
+      } else {
+        run(); // refresh immediately on return, then resume scheduling
       }
     };
 
-    run();
+    run(); // immediate first fetch
     document.addEventListener("visibilitychange", onVisibility);
     return () => {
       alive = false;

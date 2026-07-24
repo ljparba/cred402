@@ -50,6 +50,21 @@ export function markPrivate<T extends Response>(res: T): T {
   return res;
 }
 
+// ── Short public cache (aggregate/feed routes only) ──────────────────────────
+
+/**
+ * Cache policy for PUBLIC aggregate/feed data (currently GET /api/activity).
+ *
+ * `public` lets a shared CDN/proxy cache it; `max-age=0` keeps the browser always
+ * revalidating; `s-maxage=15` lets a shared cache serve a slightly-stale aggregate
+ * for a few seconds, and `stale-while-revalidate=30` refreshes it in the
+ * background — cutting origin load from the homepage poll with pure HTTP/CDN cache
+ * semantics and NO server-side memory state (so it stays correct across multiple
+ * Render instances). This is the OPPOSITE of {@link PRIVATE_NO_STORE}: it must
+ * NEVER be applied to a user-specific verification or payment response.
+ */
+export const PUBLIC_SHORT_CACHE = "public, max-age=0, s-maxage=15, stale-while-revalidate=30";
+
 /**
  * Wrap a handler so any thrown error becomes a clean 500 without exposing
  * internals. Logs the real error server-side for diagnostics.

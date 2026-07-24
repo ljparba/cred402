@@ -6,6 +6,7 @@
 
 > Accountless, pay-per-use credential verification on Hedera using x402 payments and tamper-evident HCS records.
 
+[![CI](https://github.com/ljparba/cred402/actions/workflows/ci.yml/badge.svg)](https://github.com/ljparba/cred402/actions/workflows/ci.yml)
 [![Hedera Testnet](https://img.shields.io/badge/Hedera-Testnet-8259ef)](https://hashscan.io/testnet)
 [![x402 v2](https://img.shields.io/badge/x402-v2-1c1c1c)](https://x402.org)
 [![Next.js 15](https://img.shields.io/badge/Next.js-15-black)](https://nextjs.org)
@@ -34,10 +35,11 @@ payments use valueless testnet HBAR. It is not a production identity or credenti
 | **Settlement transaction (HashScan)** | https://hashscan.io/testnet/transaction/0.0.9185802-1784718257-721825634 |
 | **Demo video** | https://youtu.be/J5tYC3zegNA?si=ZhVZzrQwIK2JMtGb |
 
-Automated gates are green: `npm test` **143/143** (incl. **52** structural frontend guards, **15**
-UI-truthfulness guards, and the Phase-2 payment-safety suites; the DB-backed suites use isolated
-PGlite directories, close them, and exit naturally), `npm run verify:samples` **7/7**, plus `lint`,
-`typecheck`, a production build, and a local production smoke test — all passing. The full flow is
+Automated gates are green: `npm test` **158/158** (incl. **52** structural frontend guards, **15**
+UI-truthfulness guards, the Phase-2 payment-safety suites, and the Phase-3 retention-cleanup and
+activity-cache suites; the DB-backed suites use isolated PGlite directories, close them, and exit
+naturally), `npm run verify:samples` **7/7**, plus `lint`, `typecheck`, a production build, a
+GitHub Actions CI workflow, and a local production smoke test — all passing. The full flow is
 **verified live on Hedera Testnet**: a real x402 v2 HBAR settlement with independent Mirror Node
 confirmation and HCS evidence, plus **B6 replay-rejection (PASS)** and **B7 idempotent-re-access
 (PASS)** live. **B8 concurrent-same-request payment protection** is covered by an automated,
@@ -158,6 +160,12 @@ The landing page states only what the implementation can back:
 - **Loading and failure** — while the request is in flight the row shows `—` / *Loading*; if it fails
   with no earlier real values, `—` / *Unavailable*. Zeros or fallback numbers are never displayed,
   and the count-up animation only runs on real values.
+- **Live feed cadence** — the homepage refreshes `GET /api/activity` roughly every **30 seconds** (the
+  first fetch is immediate). Recurring polling **pauses while the tab is hidden** and resumes with a
+  fresh fetch on return, only one request is ever in flight, and a failed refresh **keeps the last
+  known-good values** on screen (never replaced with zeros). The endpoint carries a short **public**
+  shared-cache header (`Cache-Control: public, max-age=0, s-maxage=15, stale-while-revalidate=30`) so a
+  CDN can absorb the poll — it holds only public aggregate/feed data, with no server-side memory state.
 - **One payment action** — the 402 screen offers a single button, **`Use Demo Wallet · <price> tHBAR`**
   (price from the live 402 challenge), which calls `POST /api/pay`: the built-in **server-side testnet
   demo wallet**. There is no wallet connect and no second, different payment method — agents settle
@@ -203,7 +211,9 @@ Confirmed behavior in the current code:
   Rate limits are a best-effort abuse brake and do not replace the per-request payment lock.
 - **Private responses** — every response that can carry user-specific verification or payment data
   (`/api/verify`, `/api/pay`, `/api/report/:id`, `/api/demo/register`, `/api/demo/:id`) is sent with
-  `Cache-Control: private, no-store` and `Pragma: no-cache`, on success and error alike.
+  `Cache-Control: private, no-store` and `Pragma: no-cache`, on success and error alike. The one
+  cacheable route is the **public** aggregate feed `GET /api/activity` (short shared cache, no
+  user-specific data); its sanitized generic 500 is never marked cacheable.
 - **Baseline security headers** — every response carries `X-Content-Type-Options: nosniff`,
   `Referrer-Policy: strict-origin-when-cross-origin`,
   `Permissions-Policy: camera=(), microphone=(), geolocation=()`, and `X-Frame-Options: DENY`.
@@ -309,11 +319,51 @@ From `package.json`:
 | `npm test` | Node's built-in test runner (via `tsx`) — the full suite |
 | `npm run verify:samples` | Run every sample through the real engine and assert its verdict |
 | `npm run db:migrate` / `db:seed` / `db:reset` / `db:setup` | Database lifecycle (local or `DATABASE_URL`) |
+| `npm run db:cleanup` | **Owner-run** retention cleanup — **dry-run by default** (see [Operations](#operations-retention-cleanup)) |
 | `npm run certs:generate` | Render the deterministic sample PDFs |
 | `npm run hedera:create-topic` / `hedera:anchor` / `hedera:create-wallet` | **Owner-only, live Hedera writes** (need testnet keys) |
 | `npm run agent:demo` | Machine-readable x402 client demo (prints the 402; settles only in configured mode) |
 
 The `hedera:*` scripts and configured `agent:demo` perform **live testnet actions** and require keys.
+
+## Operations: retention cleanup
+
+`npm run db:cleanup` is an **owner-run** retention command for keeping a deployed database tidy. It is
+**not scheduled by this repository** and never runs during install, test, build, start, migrate, or
+deploy — it is only ever an explicit owner action. (A hosting scheduler *may* invoke it after review;
+this repo does not configure one.)
+
+- **Dry-run by default.** `npm run db:cleanup` prints a report of what *would* be removed and changes
+  nothing:
+
+  ```
+  DRY RUN
+  Policy: unpaid requests > 30d · rate-limit rows > window + 2d grace
+  Unpaid verification requests eligible: 12
+  Associated results eligible: 12
+  Associated payment challenges eligible: 9
+  Expired rate-limit rows eligible: 84
+  No rows deleted.
+  ```
+
+- **Deletion requires BOTH guards** — the `--execute` flag **and** `CONFIRM_DATABASE_CLEANUP=yes`. With
+  only one present it prints a dry-run and makes no changes:
+
+  ```bash
+  CONFIRM_DATABASE_CLEANUP=yes npm run db:cleanup -- --execute
+  ```
+
+- **What it removes** (conservatively): only `verification_requests` whose `payment_state` is `UNPAID`,
+  older than `UNPAID_REQUEST_RETENTION_DAYS` (default **30**), and carrying no settlement row of any
+  kind — plus their child preview results and 402-challenge rows (deleted first, FK-safe) — and
+  `rate_limit_hits` whose window is fully inactive plus `RATE_LIMIT_RETENTION_DAYS` (default **2** days)
+  of grace. Each group is transactional and the command is idempotent (safe to re-run).
+- **What it always keeps.** `PAID`, `PAYMENT_UNKNOWN`, and `PAYMENT_IN_PROGRESS` requests; every
+  `payment_settlements` row (settled *or* failed evidence); HCS records; credential/issuer data. Old
+  `PAYMENT_UNKNOWN` / `PAYMENT_IN_PROGRESS` rows are surfaced as **reconciliation warnings only** —
+  never deleted or unlocked (this phase adds no automatic reconciliation).
+- **No private data in output.** The report prints counts and categories only — never a filename, hash,
+  IP hash, signature, request id, or any other row content.
 
 ## API endpoints
 
@@ -346,9 +396,26 @@ Seven synthetic sample certificates ship with the app (source: `scripts/data/cat
 | `samples/unregistered/web-dev-foundations.pdf` | `UNREGISTERED_ISSUER` |
 | `samples/fake/counterfeit-certificate.pdf` | `UNKNOWN` |
 
+## Continuous integration
+
+A GitHub Actions workflow ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) runs the full gate on
+every push and pull request to `master` (superseded runs on the same ref are cancelled). It uses
+**Node.js 20** with the npm cache, `permissions: contents: read`, and a build timeout, and runs
+completely **offline with no secrets**:
+
+```
+npm ci → npm run lint → npm run typecheck → npm test → npm run verify:samples → npm run build
+```
+
+Sample verification needs a seeded database, so the workflow first migrates and seeds a **fresh,
+isolated PGlite directory** (`PGLITE_DATA_DIR=.pglite-ci`, `DATABASE_URL` unset). CI requires **no
+Hedera account, no x402 payer key, no facilitator, no external Postgres, no production URL, and makes
+no live payment or HCS write** — no secret is referenced by the workflow. The CI status badge is at
+the top of this README.
+
 ## Testing & verified status
 
-- `npm test` → **143 / 143** passing, with a natural process exit.
+- `npm test` → **158 / 158** passing, with a natural process exit.
 - **52** of those are **frontend structural guards** in `tests/frontend-layout.test.ts` — they read
   component source and assert layout/nav invariants. **They are not DOM or browser end-to-end tests.**
 - **15** are **UI-truthfulness guards** in `tests/ui-truthfulness.test.ts`: 11 read the public UI and
@@ -365,6 +432,12 @@ Seven synthetic sample certificates ship with the app (source: `scripts/data/cat
   `tests/rate-limit.test.ts`, `tests/http.test.ts` (early 413, no-store, security headers), and
   `tests/payment-ui.test.ts` (safe payment-failure UI states). **B8 is an automated/local acceptance
   test, not a live run.**
+- The **Phase-3 operations suites** run fully offline against isolated PGlite with a controlled clock:
+  `tests/cleanup.test.ts` proves the retention cleanup is dry-run by default, needs both execution
+  guards, deletes only old conclusively-UNPAID settlement-free requests (children FK-safe, idempotent),
+  retains paid/unknown/in-progress/settled/HCS rows, prunes only fully-expired rate-limit rows, and
+  prints counts without private row content; `tests/activity-cache.test.ts` asserts the short public
+  cache header on `GET /api/activity` and that the report/payment routes stay `private, no-store`.
 - `npm run verify:samples` → **7 / 7** samples classify to their expected verdict.
 - `lint`, `typecheck`, and the **production build** pass; a **local production smoke test**
   (`npm run start`) passed the route/API matrix (200s, genuine 402, safe typed errors, no verdict/
