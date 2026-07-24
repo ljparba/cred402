@@ -30,13 +30,14 @@ payments use valueless testnet HBAR. It is not a production identity or credenti
 | **Settlement transaction (HashScan)** | https://hashscan.io/testnet/transaction/0.0.9185802-1784718257-721825634 |
 | **Demo video** | _Pending_ |
 
-Automated gates are green: `npm test` **101/101** (incl. **52** structural frontend guards and **15**
-UI-truthfulness guards; the DB-backed suites close PGlite and exit naturally),
-`npm run verify:samples` **7/7**, plus `lint`, `typecheck`, a production build, and a local
-production smoke test — all passing. The full flow is
+Automated gates are green: `npm test` **143/143** (incl. **52** structural frontend guards, **15**
+UI-truthfulness guards, and the Phase-2 payment-safety suites; the DB-backed suites use isolated
+PGlite directories, close them, and exit naturally), `npm run verify:samples` **7/7**, plus `lint`,
+`typecheck`, a production build, and a local production smoke test — all passing. The full flow is
 **verified live on Hedera Testnet**: a real x402 v2 HBAR settlement with independent Mirror Node
 confirmation and HCS evidence, plus **B6 replay-rejection (PASS)** and **B7 idempotent-re-access
-(PASS)**. See [Live Hedera Testnet evidence](#live-hedera-testnet-evidence).
+(PASS)** live. **B8 concurrent-same-request payment protection** is covered by an automated,
+isolated acceptance test (not a live run). See [Live Hedera Testnet evidence](#live-hedera-testnet-evidence).
 
 ---
 
@@ -115,10 +116,21 @@ Cred402 uses **genuine x402 v2** with the real header names:
   **first-use-wins** uniqueness constraint.
 
 The Hedera exact scheme is a **partially-signed transaction with facilitator fee sponsorship**, not an
-EVM-style signed authorization. Its resource-bound nonce provides **challenge freshness/TTL only**;
-replay protection comes from single-use transaction IDs, the DB-unique settlement record, and the
-independent Mirror Node check. The 402 challenge, header formats, and settlement flow are implemented
-in `src/lib/x402/` and `src/app/api/report/[requestId]/route.ts`.
+EVM-style signed authorization. The value carried in the challenge is a **server-side request expiry
+token (a TTL / challenge-freshness window)**, **not a cryptographically resource-bound nonce** — the
+Hedera exact scheme has no nonce field, so it is not part of the signed payment payload. Replay and
+double-settle protection comes from four independent, layered controls:
+
+- an **atomic per-request payment claim** (`verification_requests.payment_state`,
+  `UNPAID → PAYMENT_IN_PROGRESS → PAID`) so only one caller enters the settlement-critical section;
+- a **single-use transaction ID** (`UNIQUE(payment_settlements.transaction_id)`) — a settled tx
+  unlocks exactly one report, ever;
+- a **one-settlement-per-request** database backstop (`UNIQUE` on the settled `request_id`); and
+- **independent Mirror Node confirmation** (SUCCESS + exact tinybar amount + recipient) before any
+  report is released.
+
+The 402 challenge, header formats, the concurrency-safe critical section (`payment-flow.ts`), and the
+settlement flow live in `src/lib/x402/` and `src/app/api/report/[requestId]/route.ts`.
 
 ## What the public UI shows
 
@@ -157,8 +169,12 @@ The landing page states only what the implementation can back:
 
 Confirmed behavior in the current code:
 
-- **Accepted uploads:** PDF, PNG, JPEG only. Maximum **5 MB** (`MAX_UPLOAD_SIZE`, default `5242880`
-  bytes).
+- **Accepted uploads:** PDF, PNG, JPEG only. Maximum per-file size **5 MB** (`MAX_UPLOAD_SIZE`,
+  default `5242880` bytes), checked after parsing. A separate **early request-body guard**
+  (`MAX_UPLOAD_REQUEST_SIZE`, default 6 MB) rejects a clearly-oversized upload with **413
+  `PAYLOAD_TOO_LARGE`** from its declared `Content-Length` **before the body is parsed**; a missing or
+  understated `Content-Length` still falls through to the authoritative per-file check. This
+  complements (does not replace) any deployment/proxy body limit.
 - **Magic-byte sniffing** — the real leading bytes are authoritative; a declared type that disagrees
   with the bytes, and empty or oversized files, are rejected.
 - **In-memory processing** — uploaded files are validated and hashed in memory; **raw file bytes are
@@ -166,14 +182,35 @@ Confirmed behavior in the current code:
 - **No file bytes or PII on HCS** — only a hash, ids, a status, and a timestamp.
 - **The free preview never contains the verdict or the checks**; the full report is released only
   through the 402 / x402 path.
-- **Settlement checks** — exact recipient and exact tinybar amount are verified on the Mirror Node; a
+- **One settlement per request** — a request is settled at most once. An **atomic per-request payment
+  claim** (`payment_state`) admits only one caller to the settlement-critical section, so two
+  concurrent callers can never both settle; a database `UNIQUE` on the settled `request_id` backs this
+  up. Exact recipient and exact tinybar amount are verified on the Mirror Node before release; a
   settled transaction ID unlocks exactly one report (first-use-wins); re-accessing a paid report is
-  idempotent (no second charge).
-- **Tamper Demo rate limit** — `POST /api/demo/register` uses a **DB-backed rate limit**, default
-  **3 registrations per IP per hour** (the IP is hashed before storage). The endpoint is **off by
-  default**, testnet-only, and forces a synthetic demo issuer server-side.
-- **General verification has no global rate limit** — `POST /api/verify` currently has no per-IP
-  quota (see [Known limitations](#known-limitations)).
+  idempotent (no second charge, same transaction ID).
+- **Safe payment failures** — a failure that provably preceded submission releases the claim and may
+  be retried; an **uncertain or post-submission** failure parks the request (`PAYMENT_CONFIRMATION_PENDING`)
+  and **never reopens it for another payment**. Nothing is auto-retried in a way that could send a
+  replacement payment.
+- **Public-endpoint rate limits** — `POST /api/verify` (default **20/IP/hour**) and `POST /api/pay`
+  (stricter, default **5/IP/hour**, because it spends real testnet HBAR) are **DB-backed** and per
+  **hashed** IP (the raw IP is never stored or logged). Over-limit requests return **429 `RATE_LIMITED`**
+  with a `Retry-After` header. `POST /api/demo/register` keeps its own limit (default **3/IP/hour**).
+  Rate limits are a best-effort abuse brake and do not replace the per-request payment lock.
+- **Private responses** — every response that can carry user-specific verification or payment data
+  (`/api/verify`, `/api/pay`, `/api/report/:id`, `/api/demo/register`, `/api/demo/:id`) is sent with
+  `Cache-Control: private, no-store` and `Pragma: no-cache`, on success and error alike.
+- **Baseline security headers** — every response carries `X-Content-Type-Options: nosniff`,
+  `Referrer-Policy: strict-origin-when-cross-origin`,
+  `Permissions-Policy: camera=(), microphone=(), geolocation=()`, and `X-Frame-Options: DENY`.
+- **Expired requests** — an unpaid request that outlives its TTL returns **410 `REQUEST_EXPIRED`**
+  (re-upload); no fresh 402 is issued, the TTL is never silently refreshed, and a supplied payment
+  signature is rejected before any facilitator call. A **paid** report stays accessible after expiry.
+- **No secret leakage** — no private key, `PAYMENT-SIGNATURE`, signed transaction bytes, raw IP, or
+  database secret is ever logged or returned; payment errors surface only stable, safe codes.
+- **Configuration is reported honestly** — `GET /api/health` exposes three independent booleans
+  (`config.hcsWriteConfigured`, `config.x402SettlementConfigured`, `config.demoWalletConfigured`) and
+  public identifiers/URLs only — never a key or signature.
 
 Not implemented (and not claimed): OCR, visual/content matching, malware scanning, issuer identity
 verification, or universal fraud detection.
@@ -278,9 +315,9 @@ The `hedera:*` scripts and configured `agent:demo` perform **live testnet action
 
 | Route | What it does |
 |---|---|
-| `POST /api/verify` | Free: validate + hash an uploaded file, identify the credential, return a **locked** preview (no verdict/checks) with a request ID. |
-| `GET /api/report/:requestId` | **x402-gated**: returns HTTP 402 without payment; releases the full report only after an independently-confirmed settlement (idempotent on re-access). |
-| `POST /api/pay` | Built-in demo-wallet payer (server-side x402 client) used by the UI to settle a report. |
+| `POST /api/verify` | Free: validate + hash an uploaded file, identify the credential, return a **locked** preview (no verdict/checks) with a request ID. **Rate limited** (default 20/IP/hour); early 413 on an oversized declared body. |
+| `GET /api/report/:requestId` | **x402-gated**: returns HTTP 402 without payment; releases the full report only after an independently-confirmed settlement (idempotent on re-access). 410 `REQUEST_EXPIRED` for an expired unpaid request; 409 while another payment is in progress/pending. |
+| `POST /api/pay` | Built-in demo-wallet payer (server-side x402 client) used by the UI to settle a report. **Rate limited** (default 5/IP/hour); preserves the downstream typed error codes. |
 | `GET /api/samples` | The synthetic sample-certificate catalogue. |
 | `GET /api/samples/:slug` | Download one sample PDF (path resolved from a trusted catalogue row). |
 | `GET /api/activity` | Recent HCS / payment / verification activity for the live feed, plus the real counts (and `hcsSource`) behind the headline statistics. |
@@ -307,7 +344,7 @@ Seven synthetic sample certificates ship with the app (source: `scripts/data/cat
 
 ## Testing & verified status
 
-- `npm test` → **101 / 101** passing, with a natural process exit.
+- `npm test` → **143 / 143** passing, with a natural process exit.
 - **52** of those are **frontend structural guards** in `tests/frontend-layout.test.ts` — they read
   component source and assert layout/nav invariants. **They are not DOM or browser end-to-end tests.**
 - **15** are **UI-truthfulness guards** in `tests/ui-truthfulness.test.ts`: 11 read the public UI and
@@ -315,6 +352,15 @@ Seven synthetic sample certificates ship with the app (source: `scripts/data/cat
   time, no settlement-speed promise, no blanket decentralization claim, one payment action, the hero
   sample labelled), and 4 invoke the real `GET /api/activity` handler against an isolated embedded
   database to prove each displayed statistic maps to actual rows.
+- The **Phase-2 payment-safety suites** cover the concurrency and hardening invariants against
+  isolated PGlite databases and mocked facilitator/Mirror dependencies (never live Hedera):
+  `tests/payment.test.ts` (**B6** replay, **B7** idempotent re-access, **B8** concurrent
+  same-request protection with a barrier proving facilitator settle runs exactly once, plus safe/
+  uncertain failure classification and the settled-request uniqueness constraint),
+  `tests/migration.test.ts` (fresh + upgrade-path migration, duplicate detection),
+  `tests/rate-limit.test.ts`, `tests/http.test.ts` (early 413, no-store, security headers), and
+  `tests/payment-ui.test.ts` (safe payment-failure UI states). **B8 is an automated/local acceptance
+  test, not a live run.**
 - `npm run verify:samples` → **7 / 7** samples classify to their expected verdict.
 - `lint`, `typecheck`, and the **production build** pass; a **local production smoke test**
   (`npm run start`) passed the route/API matrix (200s, genuine 402, safe typed errors, no verdict/
@@ -356,10 +402,14 @@ Verified on **Hedera Testnet** using **x402 v2** and the native HBAR asset `0.0.
   credential ID.
 - **Modified arbitrary uploads need a stable Demo ID** — to prove a modified copy is `TAMPERED`, its
   original must have been anchored first and its demo credential ID supplied on re-verification.
-- **General `/api/verify` has no global rate limit** (the Tamper Demo endpoint does).
+- **Rate limits are best-effort** — DB-backed and per hashed IP, they depend on the trusted proxy's
+  forwarded headers (on Render, its load balancer) and are an abuse brake, not an authentication
+  boundary.
 - **Frontend structural tests are not browser E2E** — they guard source-level invariants.
-- **The Hedera exact-scheme nonce is freshness/TTL only** — it cannot cryptographically bind the
-  resource; replay protection is layered (single-use tx id + DB uniqueness + Mirror verification).
+- **The x402 request token is a server-side TTL, not a cryptographically resource-bound nonce** — the
+  Hedera exact scheme has no nonce field, so the token is not part of the signed payment; replay and
+  double-settle protection is layered (atomic per-request claim + single-use tx id + DB uniqueness +
+  Mirror verification).
 - **Mainnet readiness and a formal third-party audit are out of scope** for this testnet proof of
   concept.
 

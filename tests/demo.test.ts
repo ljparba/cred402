@@ -18,7 +18,7 @@ import assert from "node:assert/strict";
 import { getDbBundle } from "@/lib/db";
 import { registerDbTeardown } from "./lib/db-teardown";
 import { registerDemoOriginal, sanitizeLabel, DEMO_ISSUER_ID } from "@/lib/demo/register";
-import { checkAndRecord } from "@/lib/demo/rate-limit";
+import { checkAndRecord } from "@/lib/security/rate-limit";
 import { verify } from "@/lib/verify/engine";
 import { sha256 } from "@/lib/verify/hash";
 

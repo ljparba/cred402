@@ -76,7 +76,7 @@ async function main() {
   // Always show the genuine 402 challenge first.
   await showChallenge(requestId);
 
-  if (!serverConfig.x402Configured) {
+  if (!serverConfig.demoWalletConfigured) {
     console.log(
       "\nℹ Demo-payer keys are not configured, so no live settlement was performed.\n" +
         "  The HTTP 402 above IS the genuine paywall. To settle for real:\n" +

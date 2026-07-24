@@ -28,7 +28,7 @@ import { HowItWorksPreview } from "@/components/sections/HowItWorksPreview";
 import { Samples } from "@/components/sections/Samples";
 import { TamperDemoTeaser } from "@/components/sections/TamperDemoTeaser";
 import { UploadScan, type ScanPhase } from "@/components/flow/UploadScan";
-import { Payment402, type PayPhase } from "@/components/flow/Payment402";
+import { Payment402, type PayPhase, type PayError } from "@/components/flow/Payment402";
 import { VerificationEngine } from "@/components/flow/VerificationEngine";
 import { Report } from "@/components/flow/Report";
 
@@ -86,6 +86,7 @@ export default function Home() {
   const [payPhase, setPayPhase] = useState<PayPhase>("challenge");
   const [challenge, setChallenge] = useState<Challenge402 | null>(null);
   const [report, setReport] = useState<ReportResponse | null>(null);
+  const [payError, setPayError] = useState<PayError | null>(null);
 
   const flowRef = useRef<HTMLDivElement>(null);
   const scrollToFlow = useCallback(() => {
@@ -102,6 +103,7 @@ export default function Home() {
     setPayPhase("challenge");
     setChallenge(null);
     setReport(null);
+    setPayError(null);
   }, []);
 
   /**
@@ -206,36 +208,106 @@ export default function Home() {
   }, [preview, scrollToFlow]);
 
   /**
-   * Pay: try the real demo-wallet settlement; on unconfigured deployments fall
-   * back to the honest ?demo=1 release. Either way, advance to the engine.
+   * A released report is only allowed to advance the flow when it is COMPLETE:
+   * a verdict plus a non-empty checks array plus a payment object. A missing or
+   * malformed report keeps the user on the payment screen (never a blank engine).
+   */
+  const advanceToReport = useCallback(
+    (candidate: ReportResponse | undefined | null): boolean => {
+      const complete =
+        !!candidate &&
+        !!candidate.verdict &&
+        Array.isArray(candidate.checks) &&
+        candidate.checks.length > 0 &&
+        !!candidate.payment;
+      if (!complete) return false;
+      setReport(candidate);
+      setPayError(null);
+      setPayPhase("unlocked");
+      setStage("engine");
+      scrollToFlow();
+      return true;
+    },
+    [scrollToFlow],
+  );
+
+  /** Map a downstream payment code to a safe on-screen error + next action. */
+  const failWith = useCallback((code: string | undefined, retryAfter?: number) => {
+    const reupload = new Set(["REQUEST_EXPIRED", "REQUEST_NOT_FOUND", "PAYMENT_ALREADY_CONSUMED"]);
+    const pending = new Set(["PAYMENT_IN_PROGRESS", "PAYMENT_CONFIRMATION_PENDING"]);
+    let action: PayError["action"] = "retry";
+    if (code && reupload.has(code)) action = "reupload";
+    else if (code && pending.has(code)) action = "pending";
+
+    const message =
+      action === "reupload"
+        ? code === "REQUEST_EXPIRED"
+          ? "This request expired before payment completed. Upload the file again to get a fresh challenge."
+          : code === "PAYMENT_ALREADY_CONSUMED"
+            ? "That payment was already used for a report. Upload the file again to start over."
+            : "This request is no longer available. Upload the file again."
+        : action === "pending"
+          ? "A payment for this request is being processed. No second payment was sent — use Check status."
+          : code === "RATE_LIMITED"
+            ? `Too many payment attempts. Try again in ~${retryAfter ?? 60}s.`
+            : "Payment didn't go through. No charge was made — you can try again.";
+
+    setPayError({ code, action, message, retryAfter });
+    setPayPhase("challenge");
+  }, []);
+
+  /**
+   * Pay via the built-in demo wallet. On success (a complete report) advance to
+   * the engine; on failure stay on the payment screen with a safe message. The
+   * honest ?demo=1 release is used ONLY when this deployment cannot settle at
+   * all — never as a fallback in configured mode.
    */
   const pay = useCallback(async () => {
     if (!preview) return;
+    // Guard: never start a second payment while one is in flight.
+    if (payPhase === "paying" || payPhase === "settling") return;
+    setPayError(null);
     setPayPhase("paying");
+    const settlementConfigured = preview.payment.configured;
     try {
       const result = await api.pay(preview.requestId);
-      if (result.ok && result.report) {
+      if (result.ok) {
         setPayPhase("settling");
-        setReport(result.report);
-      } else if (!result.configured) {
-        // Unconfigured — genuine 402 stands; release the honest demo report.
+        if (advanceToReport(result.report)) return;
+        // Paid but the report came back incomplete — do not advance blindly.
+        failWith(undefined);
+        return;
+      }
+      if (!result.configured && !settlementConfigured) {
+        // No demo wallet AND no live settlement → honest simulated release.
         setPayPhase("settling");
         const demo = await api.report(preview.requestId, { demo: true });
-        if (demo.report) setReport(demo.report);
-      } else {
-        // Configured but failed (expired challenge, etc.) — retry demo path off.
-        const retry = await api.report(preview.requestId);
-        if (retry.report) setReport(retry.report);
+        if (advanceToReport(demo.report)) return;
+        failWith(undefined);
+        return;
       }
+      failWith(result.code, result.retryAfter);
     } catch {
-      // Last-resort demo release so the reviewer always sees the report UI.
-      const demo = await api.report(preview.requestId, { demo: true });
-      if (demo.report) setReport(demo.report);
+      failWith(undefined);
     }
-    setPayPhase("unlocked");
-    setStage("engine");
-    scrollToFlow();
-  }, [preview, scrollToFlow]);
+  }, [preview, payPhase, advanceToReport, failWith]);
+
+  /**
+   * PAYMENT-FREE status check for an in-progress/pending request. Re-reads the
+   * report resource (no payment) and advances if it has since been released;
+   * otherwise keeps the user informed without ever resubmitting payment.
+   */
+  const checkStatus = useCallback(async () => {
+    if (!preview) return;
+    setPayPhase("settling");
+    try {
+      const res = await api.report(preview.requestId);
+      if (res.report && advanceToReport(res.report)) return;
+      failWith(res.code ?? "PAYMENT_CONFIRMATION_PENDING");
+    } catch {
+      failWith("PAYMENT_CONFIRMATION_PENDING");
+    }
+  }, [preview, advanceToReport, failWith]);
 
   const engineComplete = useCallback(() => {
     setStage("report");
@@ -354,7 +426,10 @@ export default function Home() {
                   challenge={challenge}
                   preview={preview}
                   phase={payPhase}
+                  error={payError}
                   onPay={pay}
+                  onCheckStatus={checkStatus}
+                  onReupload={verifyAnother}
                   onBack={() => setStage("scan")}
                   onViewSample={() => {
                     const valid = samples.find((s) => s.category === "valid");

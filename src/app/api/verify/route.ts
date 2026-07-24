@@ -11,8 +11,9 @@
  * attaches live payment + on-chain proof that only exists post-settlement.
  */
 import type { NextRequest } from "next/server";
-import { apiError, json, safeHandler } from "@/lib/http";
+import { apiError, enforceRequestSize, json, safePrivateHandler } from "@/lib/http";
 import { serverConfig, tinybarsToHbar } from "@/lib/config";
+import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { newNonce, newRequestId, newResultId } from "@/lib/ids";
 import { sha256 } from "@/lib/verify/hash";
 import { validateUpload } from "@/lib/verify/upload";
@@ -23,7 +24,13 @@ import { createVerificationRequest, createVerificationResult } from "@/lib/db/qu
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-/** How long the verification request + its nonce stay valid for payment. */
+/**
+ * How long a verification request stays payable. This is a SERVER-SIDE TTL /
+ * challenge freshness window, not cryptographic binding — the issued token is
+ * not part of the signed x402 payload (see `src/lib/x402/request-ttl.ts`).
+ * Once elapsed, an unpaid request is 410 Gone and must be re-uploaded; it is
+ * never silently refreshed.
+ */
 const REQUEST_TTL_MS = 15 * 60 * 1000;
 
 /** Accept only a safe credential-id shape (letters, digits, dashes; capped). */
@@ -35,7 +42,21 @@ function sanitizeCredentialId(value: FormDataEntryValue | null): string | undefi
 }
 
 export async function POST(req: NextRequest) {
-  return safeHandler("api/verify", async () => {
+  return safePrivateHandler("api/verify", async () => {
+    // Reject a clearly-oversized DECLARED body before buffering/parsing it. The
+    // authoritative per-file 5 MB check still runs after parsing, so a missing
+    // or understated Content-Length changes nothing.
+    const tooLarge = enforceRequestSize(req, serverConfig.maxUploadRequestSize);
+    if (tooLarge) return tooLarge;
+
+    const limited = await enforceRateLimit(
+      req.headers,
+      "verify",
+      serverConfig.verifyRateLimitMax,
+      serverConfig.verifyRateLimitWindowSeconds,
+    );
+    if (limited) return limited;
+
     let form: FormData;
     try {
       form = await req.formData();
@@ -119,7 +140,8 @@ export async function POST(req: NextRequest) {
         amountHbar: tinybarsToHbar(serverConfig.x402Price),
         currencyLabel: "tHBAR",
         payTo: serverConfig.x402PaymentRecipient ?? null,
-        configured: serverConfig.x402Configured,
+        /** True when this deployment can actually settle a report payment. */
+        configured: serverConfig.x402SettlementConfigured,
       },
     });
   });

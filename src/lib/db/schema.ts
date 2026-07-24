@@ -21,7 +21,7 @@ import {
   timestamp,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 
 // ── Shared value unions ──────────────────────────────────────────────────────
 export type CredentialStatus = "ACTIVE" | "REVOKED" | "EXPIRED";
@@ -30,6 +30,19 @@ export type CredentialSource = "seed" | "demo";
 export type EventType = "CREDENTIAL_ISSUED" | "CREDENTIAL_REVOKED" | "ISSUER_REGISTERED";
 export type RequestStatus = "AWAITING_PAYMENT" | "PAID" | "COMPLETED" | "FAILED";
 export type SettlementStatus = "SETTLED" | "FAILED";
+/**
+ * Payment lifecycle of ONE verification request — the authoritative concurrency
+ * lock for the settlement-critical section (`status` above stays a descriptive
+ * lifecycle label).
+ *
+ *  UNPAID               no settlement attempt owns this request
+ *  PAYMENT_IN_PROGRESS  exactly one caller is inside the settlement section
+ *  PAID                 a Mirror-confirmed settlement row exists
+ *  PAYMENT_UNKNOWN      an attempt failed AFTER (or possibly after) submission —
+ *                       terminal for automatic payment: the request is never
+ *                       reopened, so no replacement payment can ever be sent
+ */
+export type PaymentState = "UNPAID" | "PAYMENT_IN_PROGRESS" | "PAID" | "PAYMENT_UNKNOWN";
 export type SampleCategory =
   | "valid"
   | "tampered"
@@ -150,10 +163,30 @@ export const verificationRequests = pgTable(
     sha256: text("sha256").notNull(),
     credentialId: text("credential_id"),
     issuerId: text("issuer_id"),
-    /** Resource-bound nonce issued in the 402 challenge. */
+    /**
+     * Opaque REQUEST EXPIRY TOKEN carried in the 402 challenge. It is a
+     * server-side freshness value only: the Hedera `exact` scheme has no nonce
+     * field, so this is NOT cryptographically bound into the signed payment.
+     * (Column name kept for migration safety — see `nonceExpiresAt`, which is
+     * the value the code actually enforces.)
+     */
     nonce: text("nonce").notNull(),
+    /** Server-side request TTL. After this instant an UNPAID request is 410 Gone. */
     nonceExpiresAt: timestamp("nonce_expires_at", { withTimezone: true, mode: "date" }).notNull(),
     status: text("status").$type<RequestStatus>().notNull().default("AWAITING_PAYMENT"),
+    /**
+     * Atomic payment claim. Every transition is a compare-and-set on this
+     * column, which is what stops two concurrent callers settling twice.
+     */
+    paymentState: text("payment_state").$type<PaymentState>().notNull().default("UNPAID"),
+    /** When the current PAYMENT_IN_PROGRESS claim was taken (diagnostics). */
+    paymentClaimedAt: timestamp("payment_claimed_at", { withTimezone: true, mode: "date" }),
+    /**
+     * Transaction id of an attempt whose outcome is unknown. Public Hedera
+     * identifier, never a signature or key — it is the reconciliation handle
+     * for a PAYMENT_UNKNOWN request.
+     */
+    paymentClaimTxId: text("payment_claim_tx_id"),
     /** Provisional verdict computed at preview time (report still gated). */
     previewVerdict: text("preview_verdict").$type<Verdict>(),
     createdAt: now(),
@@ -220,7 +253,18 @@ export const paymentSettlements = pgTable(
     hashscanUrl: text("hashscan_url"),
     createdAt: now(),
   },
-  (t) => [uniqueIndex("payment_settlements_tx_idx").on(t.transactionId)],
+  (t) => [
+    uniqueIndex("payment_settlements_tx_idx").on(t.transactionId),
+    /**
+     * Database backstop for "one request settles at most once" (invariant P1).
+     * PARTIAL on status='SETTLED' so a FAILED attempt can still be recorded as
+     * evidence for the same request — only successful settlements are capped
+     * at one. Concurrent callers that somehow both reach the insert lose here.
+     */
+    uniqueIndex("payment_settlements_settled_request_idx")
+      .on(t.requestId)
+      .where(sql`${t.status} = 'SETTLED'`),
+  ],
 );
 
 // ── demo_samples (downloadable test catalogue) ───────────────────────────────

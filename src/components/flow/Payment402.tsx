@@ -31,6 +31,9 @@ import {
   Radar,
   Loader2,
   ArrowLeft,
+  AlertTriangle,
+  RefreshCw,
+  UploadCloud,
 } from "lucide-react";
 import { GlassPanel } from "@/components/ui/GlassPanel";
 import { Button } from "@/components/ui/Button";
@@ -42,6 +45,20 @@ import type { Challenge402, VerifyResponse } from "@/components/lib/api";
 import { cn } from "@/lib/utils";
 
 export type PayPhase = "challenge" | "paying" | "settling" | "unlocked";
+
+/**
+ * A safe, on-screen payment failure. `action` decides which recovery control is
+ * offered — and, crucially, NONE of them auto-submits a second payment:
+ *   retry    → a "Try again" button (pre-settlement failures only)
+ *   reupload → a "Re-upload" button (expired / not-found requests)
+ *   pending  → a "Check status" button (a PAYMENT-FREE report re-read)
+ */
+export interface PayError {
+  code?: string;
+  action: "retry" | "reupload" | "pending";
+  message: string;
+  retryAfter?: number;
+}
 
 const SUBSTEPS = [
   { n: 1, title: "Request", sub: "Report requested" },
@@ -60,14 +77,20 @@ export function Payment402({
   challenge,
   preview,
   phase,
+  error,
   onPay,
+  onCheckStatus,
+  onReupload,
   onBack,
   onViewSample,
 }: {
   challenge: Challenge402 | null;
   preview: VerifyResponse | null;
   phase: PayPhase;
+  error?: PayError | null;
   onPay: () => void;
+  onCheckStatus?: () => void;
+  onReupload?: () => void;
   onBack: () => void;
   onViewSample?: () => void;
 }) {
@@ -223,24 +246,73 @@ export function Payment402({
             Pay-per-use access. No account required.
           </p>
 
-          {/* action — ONE payment path (the built-in server-side demo wallet) */}
-          <div className="flex w-full min-w-0 max-w-full flex-col items-center gap-2">
-            <Button
-              size="lg"
-              className="w-full min-w-0 whitespace-normal text-center"
-              onClick={onPay}
-              disabled={busy}
+          {/* Safe payment-failure banner. Stays on THIS screen; the report is
+              never advanced without a complete report, and no control here ever
+              triggers a second automatic payment. */}
+          {error && !busy && (
+            <div
+              role="alert"
+              className="flex w-full min-w-0 max-w-full items-start gap-2.5 rounded-xl border border-[color:rgba(239,68,68,0.35)] bg-[color:rgba(239,68,68,0.08)] p-3.5"
             >
-              {busy ? (
-                <>
-                  <Loader2 className="h-5 w-5 shrink-0 animate-spin" /> Settling…
-                </>
-              ) : (
-                <>
-                  <Cred402Mark className="h-5 w-5 shrink-0" /> Use Demo Wallet · {price} tHBAR
-                </>
-              )}
-            </Button>
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-danger" />
+              <p className="min-w-0 break-words text-xs text-danger-soft">{error.message}</p>
+            </div>
+          )}
+
+          {/* action — ONE payment path (the built-in server-side demo wallet).
+              A pending/in-progress state offers only a payment-free status check;
+              an expired/not-found request offers re-upload; a safe pre-settlement
+              failure offers a retry. */}
+          <div className="flex w-full min-w-0 max-w-full flex-col items-center gap-2">
+            {error?.action === "pending" ? (
+              <Button
+                size="lg"
+                variant="outline"
+                className="w-full min-w-0 whitespace-normal text-center"
+                onClick={onCheckStatus}
+                disabled={busy}
+              >
+                {busy ? (
+                  <>
+                    <Loader2 className="h-5 w-5 shrink-0 animate-spin" /> Checking…
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="h-5 w-5 shrink-0" /> Check status
+                  </>
+                )}
+              </Button>
+            ) : error?.action === "reupload" ? (
+              <Button
+                size="lg"
+                className="w-full min-w-0 whitespace-normal text-center"
+                onClick={onReupload}
+                disabled={busy}
+              >
+                <UploadCloud className="h-5 w-5 shrink-0" /> Re-upload to start over
+              </Button>
+            ) : (
+              <Button
+                size="lg"
+                className="w-full min-w-0 whitespace-normal text-center"
+                onClick={onPay}
+                disabled={busy}
+              >
+                {busy ? (
+                  <>
+                    <Loader2 className="h-5 w-5 shrink-0 animate-spin" /> Settling…
+                  </>
+                ) : error?.action === "retry" ? (
+                  <>
+                    <RefreshCw className="h-5 w-5 shrink-0" /> Try again · {price} tHBAR
+                  </>
+                ) : (
+                  <>
+                    <Cred402Mark className="h-5 w-5 shrink-0" /> Use Demo Wallet · {price} tHBAR
+                  </>
+                )}
+              </Button>
+            )}
             <p className="break-words text-center text-xs text-ink-faint">
               Testnet demo wallet — the server-side payer settles this 402 for you. No wallet
               connect, no account.

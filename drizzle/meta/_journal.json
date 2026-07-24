@@ -15,6 +15,13 @@
       "when": 1784531173627,
       "tag": "0001_tearful_demogoblin",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1784868006999,
+      "tag": "0002_phase2_payment_lock",
+      "breakpoints": true
     }
   ]
 }
