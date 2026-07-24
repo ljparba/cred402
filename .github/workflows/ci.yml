@@ -1,0 +1,65 @@
+name: CI
+
+# Runs the full offline gate on every push/PR to master. It needs NO secrets and
+# makes NO live calls: no Hedera account, no x402 payer key, no facilitator, no
+# HCS write, no live payment, no production DATABASE_URL, no external Postgres.
+# Sample verification uses a throwaway embedded PGlite database created in-job.
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+# Cancel superseded runs on the same ref so only the latest commit's run finishes.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# Least privilege: the job only reads the checked-out source.
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # The project declares "engines": { "node": ">=20" }; one version is enough.
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Type-check
+        run: npm run typecheck
+
+      - name: Unit + integration tests
+        run: npm test
+
+      # Sample verification needs a seeded database. Build a FRESH, isolated
+      # PGlite directory just for CI (DATABASE_URL stays unset → embedded PGlite).
+      - name: Prepare isolated PGlite database
+        run: |
+          npm run db:migrate
+          npm run db:seed
+        env:
+          PGLITE_DATA_DIR: .pglite-ci
+
+      - name: Verify samples against the real engine
+        run: npm run verify:samples
+        env:
+          PGLITE_DATA_DIR: .pglite-ci
+
+      - name: Production build
+        run: npm run build
