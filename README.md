@@ -32,7 +32,7 @@ payments use valueless testnet HBAR. It is not a production identity or credenti
 | **Source** | https://github.com/ljparba/cred402 |
 | **HCS topic (HashScan)** | https://hashscan.io/testnet/topic/0.0.9651085 |
 | **Settlement transaction (HashScan)** | https://hashscan.io/testnet/transaction/0.0.9185802-1784718257-721825634 |
-| **Demo video** | _Pending_ |
+| **Demo video** | https://youtu.be/J5tYC3zegNA?si=ZhVZzrQwIK2JMtGb |
 
 Automated gates are green: `npm test` **86/86** (incl. **52** structural frontend guards; the
 DB-backed suites close PGlite and exit naturally), `npm run verify:samples` **7/7**, plus `lint`,
