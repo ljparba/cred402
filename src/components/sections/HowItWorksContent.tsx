@@ -149,7 +149,8 @@ export function HowItWorksContent({ health }: { health: HealthResponse | null })
       </section>
 
       {/* ── B · 8-step verification flow ──────────────────────────────────── */}
-      <section className="mt-16">
+      {/* Anchor target for the "See the x402 API flow" link on the 402 screen. */}
+      <section className="mt-16 scroll-mt-24" id="x402-flow">
         <SectionHead
           eyebrow="The flow"
           title="Eight steps from upload to proof"
@@ -286,7 +287,8 @@ export function HowItWorksContent({ health }: { health: HealthResponse | null })
         <GlassPanel className="flex flex-col items-center justify-center p-6 sm:p-8">
           <HederaNetworkViz className="h-40 w-full" />
           <p className="mt-4 text-center text-xs text-ink-faint">
-            Every report is backed by Hedera Consensus Service — decentralized, immutable, verifiable.
+            Every report cites Hedera Consensus Service evidence — an append-only, tamper-evident
+            record you can check yourself on HashScan.
           </p>
         </GlassPanel>
       </section>

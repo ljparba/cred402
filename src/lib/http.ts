@@ -1,8 +1,10 @@
 /**
- * Small HTTP helpers for API route handlers: consistent JSON envelopes and a
- * safe error responder that never leaks stack traces to clients (plan §12).
+ * Small HTTP helpers for API route handlers: consistent JSON envelopes, private
+ * (never-cached) responses for user-specific data, an early request-size guard,
+ * and a safe error responder that never leaks stack traces to clients (plan §12).
  */
 import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 
 export function json<T>(data: T, init?: ResponseInit): NextResponse {
   return NextResponse.json(data, init);
@@ -25,6 +27,29 @@ export function apiError(
   return NextResponse.json(body, { status, headers: extra?.headers });
 }
 
+// ── Private (no-store) responses ─────────────────────────────────────────────
+
+/**
+ * Headers for any response that can carry user-specific verification or payment
+ * data. `private` keeps shared caches (CDNs, proxies) out entirely and
+ * `no-store` stops even the browser writing it to disk; `Pragma` covers
+ * HTTP/1.0 intermediaries. Deliberately NOT applied to the public, immutable
+ * sample downloads — those are identical for every caller and benefit from
+ * caching.
+ */
+export const PRIVATE_NO_STORE: Record<string, string> = {
+  "Cache-Control": "private, no-store",
+  Pragma: "no-cache",
+};
+
+/** Stamp the private no-cache headers onto an existing response, in place. */
+export function markPrivate<T extends Response>(res: T): T {
+  for (const [name, value] of Object.entries(PRIVATE_NO_STORE)) {
+    res.headers.set(name, value);
+  }
+  return res;
+}
+
 /**
  * Wrap a handler so any thrown error becomes a clean 500 without exposing
  * internals. Logs the real error server-side for diagnostics.
@@ -39,4 +64,48 @@ export async function safeHandler<T extends Response>(
     console.error(`[${label}]`, err);
     return apiError("Internal server error.", 500, { code: "INTERNAL_ERROR" });
   }
+}
+
+/**
+ * `safeHandler` for routes that return user-specific data. Every response that
+ * leaves the handler — success, typed error, or the generic 500 — is stamped
+ * with {@link PRIVATE_NO_STORE}, so no path can accidentally ship a cacheable
+ * report or payment response.
+ */
+export async function safePrivateHandler<T extends Response>(
+  label: string,
+  fn: () => Promise<T>,
+): Promise<T | NextResponse> {
+  return markPrivate(await safeHandler(label, fn));
+}
+
+// ── Early request-size guard ─────────────────────────────────────────────────
+
+/**
+ * Reject a clearly-oversized upload from its DECLARED `Content-Length`, before
+ * the body is read or parsed.
+ *
+ * Deliberately narrow, because `Content-Length` is client-supplied:
+ *  - absent or unparseable → allow through; the authoritative post-parse
+ *    file-size check still runs and still rejects.
+ *  - understated → likewise irrelevant, because the real bytes are measured
+ *    after parsing.
+ *  - clearly over the ceiling → 413 now, so we never buffer/parse the body.
+ *
+ * `maxRequestBytes` is the whole-request ceiling (multipart overhead included),
+ * NOT the per-file limit. This complements, and does not replace, the body
+ * limits enforced by the deployment/proxy in front of the app.
+ *
+ * @returns a 413 response to return immediately, or `null` to proceed.
+ */
+export function enforceRequestSize(req: NextRequest, maxRequestBytes: number): NextResponse | null {
+  const declared = req.headers.get("content-length");
+  if (declared === null) return null;
+  const bytes = Number(declared);
+  if (!Number.isFinite(bytes) || bytes <= maxRequestBytes) return null;
+  return apiError(
+    `Request body is too large (${bytes} bytes declared). Maximum is ${maxRequestBytes} bytes.`,
+    413,
+    { code: "PAYLOAD_TOO_LARGE" },
+  );
 }

@@ -7,11 +7,11 @@
  * a client-chosen issuer/topic/payer.
  */
 import type { NextRequest } from "next/server";
-import { apiError, json, safeHandler } from "@/lib/http";
+import { apiError, enforceRequestSize, json, safePrivateHandler } from "@/lib/http";
 import { serverConfig } from "@/lib/config";
 import { validateUpload } from "@/lib/verify/upload";
 import { registerDemoOriginal } from "@/lib/demo/register";
-import { checkAndRecord, clientIpFrom, hashIp } from "@/lib/demo/rate-limit";
+import { checkAndRecord, bucketKey } from "@/lib/security/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -21,7 +21,11 @@ const DISCLAIMER =
   "that the uploader is a real school, authorized issuer, or owner of the credential.";
 
 export async function POST(req: NextRequest) {
-  return safeHandler("api/demo/register", async () => {
+  return safePrivateHandler("api/demo/register", async () => {
+    // 0. Reject a clearly-oversized declared body before parsing it.
+    const tooLarge = enforceRequestSize(req, serverConfig.maxUploadRequestSize);
+    if (tooLarge) return tooLarge;
+
     // 1. Feature flag.
     if (!serverConfig.tamperDemoEnabled) {
       return apiError("The Create Tamper Demo feature is disabled on this deployment.", 403, {
@@ -55,9 +59,8 @@ export async function POST(req: NextRequest) {
     }
 
     // 4. Rate limit (DB-backed, per hashed IP).
-    const ipKey = `demo_register:${hashIp(clientIpFrom(req.headers))}`;
     const rl = await checkAndRecord(
-      ipKey,
+      bucketKey("demo_register", req.headers),
       serverConfig.tamperDemoRateLimitMax,
       serverConfig.tamperDemoRateLimitWindowSeconds,
     );

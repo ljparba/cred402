@@ -2,13 +2,16 @@
   "name": "cred402",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "test": "node --import tsx --test tests/hash.test.ts tests/config.test.ts tests/upload.test.ts tests/hedera.test.ts tests/engine.test.ts tests/demo.test.ts tests/frontend-layout.test.ts",
+    "test": "node --import tsx --test tests/hash.test.ts tests/config.test.ts tests/upload.test.ts tests/http.test.ts tests/hedera.test.ts tests/engine.test.ts tests/demo.test.ts tests/rate-limit.test.ts tests/migration.test.ts tests/payment.test.ts tests/frontend-layout.test.ts tests/ui-truthfulness.test.ts tests/payment-ui.test.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx scripts/migrate.ts",
     "db:seed": "tsx scripts/seed.ts",

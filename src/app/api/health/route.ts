@@ -25,30 +25,57 @@ export async function GET() {
       console.error("[api/health] db ping failed", err);
     }
 
-    const mode = serverConfig.hederaConfigured ? "configured" : "unconfigured";
+    // `mode` means exactly one thing for backward compatibility: can this
+    // deployment write to HCS. The three capabilities below are independent.
+    const mode = serverConfig.hcsWriteConfigured ? "configured" : "unconfigured";
 
     return json({
       status: dbOk ? "ok" : "degraded",
       mode,
       timestamp: new Date().toISOString(),
       db: { driver, ok: dbOk },
+      // Three separate capability flags — never one coupled boolean.
+      config: {
+        hcsWriteConfigured: serverConfig.hcsWriteConfigured,
+        x402SettlementConfigured: serverConfig.x402SettlementConfigured,
+        demoWalletConfigured: serverConfig.demoWalletConfigured,
+      },
       hedera: {
-        configured: serverConfig.hederaConfigured,
+        // Alias of hcsWriteConfigured (needs the operator private key).
+        configured: serverConfig.hcsWriteConfigured,
+        hcsWriteConfigured: serverConfig.hcsWriteConfigured,
         network: serverConfig.hederaNetwork,
         topicConfigured: Boolean(serverConfig.hcsTopicId),
         mirrorNode: serverConfig.mirrorNodeBaseUrl,
       },
       x402: {
-        configured: serverConfig.x402Configured,
+        // Can the report 402/settlement flow actually run (no operator key needed).
+        configured: serverConfig.x402SettlementConfigured,
+        settlementConfigured: serverConfig.x402SettlementConfigured,
         network: serverConfig.x402Network,
         priceTinybars: serverConfig.x402Price,
         priceHbar: tinybarsToHbar(serverConfig.x402Price),
         asset: serverConfig.x402Asset,
         facilitator: serverConfig.x402FacilitatorUrl,
         recipientConfigured: Boolean(serverConfig.x402PaymentRecipient),
-        demoPayerConfigured: Boolean(serverConfig.demoPayerId && serverConfig.demoPayerKey),
+        demoWalletConfigured: serverConfig.demoWalletConfigured,
+        // Public account id only when configured — never the key.
+        demoPayerConfigured: serverConfig.demoWalletConfigured,
       },
-      upload: { maxBytes: serverConfig.maxUploadSize },
+      rateLimits: {
+        verify: {
+          max: serverConfig.verifyRateLimitMax,
+          windowSeconds: serverConfig.verifyRateLimitWindowSeconds,
+        },
+        pay: {
+          max: serverConfig.payRateLimitMax,
+          windowSeconds: serverConfig.payRateLimitWindowSeconds,
+        },
+      },
+      upload: {
+        maxBytes: serverConfig.maxUploadSize,
+        maxRequestBytes: serverConfig.maxUploadRequestSize,
+      },
       tamperDemo: {
         enabled: serverConfig.tamperDemoEnabled,
         testnet: serverConfig.isTestnet,

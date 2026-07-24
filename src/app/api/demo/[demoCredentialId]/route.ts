@@ -4,7 +4,7 @@
  * (`source = 'demo'`); seeded catalogue credentials return 404 here.
  */
 import type { NextRequest } from "next/server";
-import { apiError, json, safeHandler } from "@/lib/http";
+import { apiError, json, safePrivateHandler } from "@/lib/http";
 import { serverConfig } from "@/lib/config";
 import { findCredentialById, getIssuer, getIssuanceHcsRecord } from "@/lib/db/queries";
 import { hashscanTopicUrl, hashscanTransactionUrl } from "@/lib/hedera/hashscan";
@@ -16,7 +16,7 @@ export async function GET(
   _req: NextRequest,
   ctx: { params: Promise<{ demoCredentialId: string }> },
 ) {
-  return safeHandler("api/demo/[demoCredentialId]", async () => {
+  return safePrivateHandler("api/demo/[demoCredentialId]", async () => {
     const { demoCredentialId } = await ctx.params;
     const credential = await findCredentialById(demoCredentialId);
     if (!credential || credential.source !== "demo") {

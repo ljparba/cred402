@@ -7,30 +7,38 @@
  * Mirror Node. The free preview lives at POST /api/verify; nothing here ever
  * leaks the verdict or checks without payment.
  *
- * Flow (plan §3.2 / §3.5):
- *   1. No PAYMENT-SIGNATURE  → 402 challenge (PAYMENT-REQUIRED header + JSON
- *      accepts). If X402_PAYMENT_RECIPIENT is unset we cannot advertise a real
- *      payTo, so we 402 with `configured:false` and NO report.
- *   2. PAYMENT-SIGNATURE present → replay-check the tx id FIRST, then
- *      verify + settle via the facilitator, then INDEPENDENTLY confirm the
- *      settlement on Mirror Node, record it (UNIQUE tx id = first-use-wins),
- *      burn the nonce, and release the full report.
- *   3. An already-settled request re-accessed by the buyer → idempotent
- *      release (no second payment).
+ * Handled in this exact order, because the order IS the safety property:
+ *   1. Already paid → idempotent release. Checked FIRST, so a paid report stays
+ *      reachable forever, including after the original request TTL expires.
+ *   2. Unpaid + TTL elapsed → 410 REQUEST_EXPIRED, re-upload. No fresh 402 is
+ *      issued, the TTL is never silently refreshed, and a supplied
+ *      PAYMENT-SIGNATURE is rejected here — before any facilitator call.
+ *   3. An unresolved earlier payment → reconcile read-only, else a safe
+ *      409 (never a second payment).
+ *   4. No PAYMENT-SIGNATURE → the 402 challenge.
+ *   5. PAYMENT-SIGNATURE → decode + replay-check the transaction id, then hand
+ *      the whole critical section to `settleReportPayment` (atomic per-request
+ *      claim, settle, independent Mirror confirmation, first-use-wins record).
+ *
+ * The concurrency and failure invariants (P1–P8) live in
+ * `src/lib/x402/payment-flow.ts`; this route is the HTTP adapter for them.
  */
 import type { NextRequest } from "next/server";
-import { apiError, json, safeHandler } from "@/lib/http";
+import { apiError, json, safePrivateHandler } from "@/lib/http";
 import { serverConfig, publicConfig, tinybarsToHbar } from "@/lib/config";
-import { newSettlementId } from "@/lib/ids";
-import { toDashedTxId } from "@/lib/hedera/mirror";
-import { hashscanTransactionUrl } from "@/lib/hedera/hashscan";
 import {
   getResourceServer,
   buildReportRequirements,
   reportResourceInfo,
 } from "@/lib/x402/server";
-import { verifySettlementOnChain } from "@/lib/x402/settlement";
-import { isRequestNonceValid, burnNonce } from "@/lib/x402/nonce";
+import { isRequestExpired } from "@/lib/x402/request-ttl";
+import { createReconciliationGateway, createSettlementGateway } from "@/lib/x402/gateway";
+import {
+  reconcileUnknownPayment,
+  settleReportPayment,
+  type SettlementOutcome,
+} from "@/lib/x402/payment-flow";
+import { toDashedTxId } from "@/lib/hedera/mirror";
 import {
   encodePaymentRequiredHeader,
   decodePaymentSignatureHeader,
@@ -46,9 +54,6 @@ import {
   getVerificationRequest,
   getVerificationResult,
   findSettlementForRequest,
-  findSettlementByTxId,
-  createSettlement,
-  updateVerificationRequest,
 } from "@/lib/db/queries";
 import type {
   PaymentSettlement,
@@ -63,8 +68,15 @@ const PAYMENT_SIGNATURE_HEADER = "PAYMENT-SIGNATURE";
 const PAYMENT_REQUIRED_HEADER = "PAYMENT-REQUIRED";
 const PAYMENT_RESPONSE_HEADER = "PAYMENT-RESPONSE";
 
-export async function GET(_req: NextRequest, ctx: { params: Promise<{ requestId: string }> }) {
-  return safeHandler("api/report/[requestId]", async () => {
+const EXPIRED_RESPONSE = {
+  message:
+    "This verification request has expired. Upload the file again to get a fresh report challenge.",
+  status: 410,
+  code: "REQUEST_EXPIRED",
+} as const;
+
+export async function GET(req: NextRequest, ctx: { params: Promise<{ requestId: string }> }) {
+  return safePrivateHandler("api/report/[requestId]", async () => {
     const { requestId } = await ctx.params;
 
     const request = await getVerificationRequest(requestId);
@@ -73,29 +85,70 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ requestId:
     }
     const result = await getVerificationResult(requestId);
 
-    // ── Idempotent re-access: this request was already paid for ────────────────
+    // ── 1. Idempotent re-access: this request was already paid for ────────────
+    // Deliberately before the expiry check — a paid report never expires.
     const existing = await findSettlementForRequest(requestId);
     if (existing) {
       return json(releasedReport(request, result, existing));
     }
 
-    // ── Demo bypass — ONLY when the deployment has no x402 keys ─────────────────
-    // A keyed (configured) deployment ignores this entirely and enforces the real
-    // 402 gate below. In the default no-keys state it lets reviewers see the full
-    // report UI with the settlement clearly labelled as simulated.
-    const demoRequested = _req.nextUrl.searchParams.get("demo") === "1";
-    if (demoRequested && !serverConfig.x402Configured) {
+    // ── 2. Unpaid + expired → 410, re-upload. No challenge, no settlement ─────
+    if (isRequestExpired(request)) {
+      return apiError(EXPIRED_RESPONSE.message, EXPIRED_RESPONSE.status, {
+        code: EXPIRED_RESPONSE.code,
+        requestId,
+      });
+    }
+
+    // ── 3. An earlier payment attempt is unresolved ───────────────────────────
+    if (request.paymentState === "PAYMENT_UNKNOWN") {
+      const payToForReconcile = serverConfig.x402PaymentRecipient;
+      if (payToForReconcile) {
+        // Read-only Mirror re-check. Cannot verify or settle → cannot pay.
+        const reconciled = await reconcileUnknownPayment({
+          request,
+          payTo: payToForReconcile,
+          gateway: createReconciliationGateway(payToForReconcile),
+        });
+        if (reconciled) {
+          return respondToOutcome(reconciled, request, result);
+        }
+      }
+      return apiError(
+        "A payment for this request was submitted but is not yet confirmed. " +
+          "This request will not accept another payment; check its status again shortly.",
+        409,
+        { code: "PAYMENT_CONFIRMATION_PENDING", requestId },
+      );
+    }
+
+    // Another caller currently owns the settlement-critical section.
+    if (request.paymentState === "PAYMENT_IN_PROGRESS") {
+      return apiError(
+        "Another payment for this request is already being settled. No second payment was sent.",
+        409,
+        { code: "PAYMENT_IN_PROGRESS", requestId },
+      );
+    }
+
+    // ── Demo bypass — ONLY when the deployment cannot settle at all ───────────
+    // A deployment configured for x402 settlement ignores this entirely and
+    // enforces the real 402 gate below. In the default no-keys state it lets
+    // reviewers see the full report UI with settlement clearly labelled
+    // simulated.
+    const demoRequested = req.nextUrl.searchParams.get("demo") === "1";
+    if (demoRequested && !serverConfig.x402SettlementConfigured) {
       return json(releasedReport(request, result, undefined, { demo: true }));
     }
 
-    const signatureHeader = _req.headers.get(PAYMENT_SIGNATURE_HEADER);
+    const signatureHeader = req.headers.get(PAYMENT_SIGNATURE_HEADER);
 
-    // ── No payment presented → 402 challenge ───────────────────────────────────
+    // ── 4. No payment presented → 402 challenge ───────────────────────────────
     if (!signatureHeader) {
       return challenge402(request);
     }
 
-    // ── Payment presented → verify, settle, prove, release ─────────────────────
+    // ── 5. Payment presented → decode, then run the critical section ──────────
     let payload;
     try {
       payload = decodePaymentSignatureHeader(signatureHeader);
@@ -105,22 +158,16 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ requestId:
       });
     }
 
-    // REPLAY CHECK FIRST — before spending any settlement effort. Extract the
-    // transaction id the client signed and reject if it already unlocked a report.
-    let dashedTxId: string;
+    // Extract the PUBLIC transaction id the client signed (never the signature
+    // or the signed bytes). Used for the replay check and, if the attempt ends
+    // uncertain, as the reconciliation handle.
+    let clientTxId: string;
     try {
       const base64Tx = extractTransactionFromPayload(payload.payload as ExactHederaPayloadV2);
-      dashedTxId = toDashedTxId(inspectHederaTransaction(base64Tx).transactionId);
+      clientTxId = toDashedTxId(inspectHederaTransaction(base64Tx).transactionId);
     } catch {
       return apiError("PAYMENT-SIGNATURE did not contain a decodable Hedera transaction.", 400, {
         code: "BAD_PAYMENT_TRANSACTION",
-      });
-    }
-
-    const alreadyUsed = await findSettlementByTxId(dashedTxId);
-    if (alreadyUsed) {
-      return apiError("This payment has already been consumed for a report.", 409, {
-        code: "PAYMENT_ALREADY_CONSUMED",
       });
     }
 
@@ -130,99 +177,43 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ requestId:
       return challenge402(request);
     }
 
-    // Freshness: nonce/challenge must not be expired.
-    if (!isRequestNonceValid(request)) {
-      return apiError("Payment challenge has expired. Request a fresh report challenge.", 402, {
-        code: "CHALLENGE_EXPIRED",
-      });
-    }
-
-    const { server, x402Ready } = await getResourceServer();
-    if (!x402Ready) {
-      return apiError("Payment facilitator is unavailable. Try again shortly.", 503, {
-        code: "FACILITATOR_UNAVAILABLE",
-      });
-    }
-
-    const requirements = await buildReportRequirements(payTo);
-    const matched = server.findMatchingRequirements(requirements, payload);
-    if (!matched) {
-      return apiError("Payment does not match the advertised requirements.", 402, {
-        code: "REQUIREMENTS_MISMATCH",
-      });
-    }
-
-    // Facilitator verification.
-    const verified = await server.verifyPayment(payload, matched);
-    if (!verified.isValid) {
-      return apiError(`Payment verification failed: ${verified.invalidReason ?? "invalid"}.`, 402, {
-        code: "PAYMENT_INVALID",
-      });
-    }
-
-    // Facilitator settlement — the REAL fee-sponsored testnet transfer.
-    let settleRes: SettleResponse;
-    try {
-      settleRes = await server.settlePayment(payload, matched);
-    } catch (err) {
-      console.error("[api/report] settlePayment threw", err);
-      return apiError("Payment settlement failed.", 402, { code: "SETTLEMENT_FAILED" });
-    }
-    if (!settleRes.success) {
-      return apiError(`Payment settlement failed: ${settleRes.errorReason ?? "unknown"}.`, 402, {
-        code: "SETTLEMENT_FAILED",
-      });
-    }
-
-    // INDEPENDENT proof — never trust the facilitator alone (plan §3.5 layer 3).
-    const settledTxDashed = toDashedTxId(settleRes.transaction);
-    const proof = await verifySettlementOnChain(
-      settledTxDashed,
+    const outcome = await settleReportPayment({
+      requestId,
       payTo,
-      Number(serverConfig.x402Price),
-    );
-    if (!proof.ok) {
-      return apiError(`Independent settlement proof failed: ${proof.reason}`, 402, {
-        code: "PROOF_FAILED",
-      });
-    }
-
-    const hashscanUrl = hashscanTransactionUrl(settledTxDashed);
-
-    // Record settlement. The UNIQUE tx-id constraint is the first-use-wins
-    // binding: a concurrent duplicate insert throws → treat as replay (409).
-    let settlement: PaymentSettlement;
-    try {
-      settlement = await createSettlement({
-        id: newSettlementId(),
-        requestId,
-        transactionId: settledTxDashed,
-        payer: settleRes.payer ?? verified.payer ?? null,
-        payTo,
-        amount: serverConfig.x402Price,
-        consensusTimestamp: proof.consensusTimestamp ?? null,
-        mirrorVerified: true,
-        status: "SETTLED",
-        hashscanUrl,
-      });
-    } catch (err) {
-      // UNIQUE violation on transaction_id → this tx already unlocked a report.
-      console.error("[api/report] createSettlement failed (likely duplicate tx)", err);
-      return apiError("This payment has already been consumed for a report.", 409, {
-        code: "PAYMENT_ALREADY_CONSUMED",
-      });
-    }
-
-    // Mark PAID then burn the nonce (→ COMPLETED). Report is now unlockable.
-    await updateVerificationRequest(requestId, { status: "PAID" });
-    await burnNonce(requestId);
-
-    const body = releasedReport(request, result, settlement);
-    return json(body, {
-      headers: {
-        [PAYMENT_RESPONSE_HEADER]: encodePaymentResponseHeader(settleRes),
-      },
+      clientTxId,
+      gateway: createSettlementGateway({ payload, payTo }),
     });
+
+    return respondToOutcome(outcome, request, result);
+  });
+}
+
+/**
+ * Map a settlement outcome to HTTP. Error bodies carry only the stable code and
+ * a safe sentence — never a facilitator/SDK/database message, a stack trace, or
+ * any part of the payment payload.
+ */
+function respondToOutcome(
+  outcome: SettlementOutcome,
+  request: VerificationRequest,
+  result: VerificationResult | undefined,
+) {
+  if (outcome.kind === "already_paid") {
+    return json(releasedReport(request, result, outcome.settlement));
+  }
+  if (outcome.kind === "released") {
+    const body = releasedReport(request, result, outcome.settlement);
+    const settleResponse = outcome.raw as SettleResponse | undefined;
+    return json(
+      body,
+      settleResponse
+        ? { headers: { [PAYMENT_RESPONSE_HEADER]: encodePaymentResponseHeader(settleResponse) } }
+        : undefined,
+    );
+  }
+  return apiError(outcome.message, outcome.status, {
+    code: outcome.code,
+    requestId: request.id,
   });
 }
 
@@ -231,7 +222,8 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ requestId:
  * real payTo, so we return an honest unconfigured 402 with NO report and no
  * accepts. Otherwise we build genuine requirements (with the facilitator's
  * feePayer) and set the PAYMENT-REQUIRED header + JSON accepts for machine
- * clients. NEVER includes verdict/checks.
+ * clients. NEVER includes verdict/checks, and is never issued for an expired
+ * request (that is a 410 above).
  */
 async function challenge402(request: VerificationRequest) {
   const payTo = serverConfig.x402PaymentRecipient;
@@ -243,7 +235,7 @@ async function challenge402(request: VerificationRequest) {
         error: "Payment required, but live settlement is not configured on this deployment.",
         accepts: [],
         configured: false,
-        note: "Live settlement requires X402_PAYMENT_RECIPIENT + operator keys",
+        note: "Live settlement requires X402_PAYMENT_RECIPIENT",
         requestId: request.id,
         price: {
           asset: serverConfig.x402Asset,

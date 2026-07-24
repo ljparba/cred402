@@ -17,7 +17,7 @@
  * Never throws — Mirror Node lag or errors resolve to `{ ok: false, reason }`
  * so the route can return a clean 402 instead of a 500.
  */
-import { pollForTransaction } from "@/lib/hedera/mirror";
+import { pollForTransaction, type PollOptions } from "@/lib/hedera/mirror";
 import { hederaAccountIdsEqual } from "@x402/hedera";
 
 export interface SettlementProof {
@@ -30,15 +30,20 @@ export interface SettlementProof {
  * Confirm that `dashedTxId` settled on-chain with an exact `expectedTinybars`
  * net credit to `payTo`. `dashedTxId` must be Mirror-Node form (`0.0.X-sss-nnn`);
  * callers pass it through `toDashedTxId` first.
+ *
+ * `poll` tunes the ingestion-lag polling: the default absorbs Mirror Node lag
+ * right after a settlement, while a reconciliation read (where the transaction
+ * is minutes old already) passes `{ maxAttempts: 1 }` for a single fast lookup.
  */
 export async function verifySettlementOnChain(
   dashedTxId: string,
   payTo: string,
   expectedTinybars: number,
+  poll?: PollOptions,
 ): Promise<SettlementProof> {
   let tx;
   try {
-    tx = await pollForTransaction(dashedTxId);
+    tx = await pollForTransaction(dashedTxId, poll);
   } catch (err) {
     return {
       ok: false,
